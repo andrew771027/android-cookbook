@@ -1,7 +1,7 @@
 # Android Cookbook Environment
 
-This guide prepares a workstation to run the Python package, its tests, and ADB commands against
-an emulator or physical Android device.
+This guide prepares a workstation to run the package, tests, and ADB commands against an emulator
+or physical Android device.
 
 ## Requirements
 
@@ -9,25 +9,20 @@ an emulator or physical Android device.
 | --- | --- | --- |
 | Git | Yes | Source control |
 | Python 3.14+ | Yes | Version declared by `pyproject.toml` |
-| Poetry 2.x | Yes | Dependency and virtual-environment management |
+| Poetry 2.x | Yes | Dependencies and virtual environments |
 | Android SDK Platform Tools | Yes | Provides `adb` and `fastboot` |
-| Android Emulator | Recommended | Provides a repeatable test device |
-| Physical Android device | Optional | Tests behavior on real hardware |
+| Android Emulator | Recommended | Repeatable integration-test device |
+| Physical Android device | Optional | Real-hardware verification |
 
-`pytest` and `pre-commit` are installed from the project dependencies by Poetry.
+Poetry installs `pytest` and `pre-commit` from the project dependencies.
 
 ## 1. Install Android Platform Tools
 
-Install Android Studio or the standalone Android SDK Platform Tools, then make sure the directory
-containing `adb` is present in `PATH`.
+Install Android Studio or standalone Platform Tools, then add the directory containing `adb` to
+`PATH`. Typical SDK roots are `$HOME/Library/Android/sdk` on macOS, `$HOME/Android/Sdk` on Linux,
+and `%LOCALAPPDATA%\Android\Sdk` on Windows.
 
-Typical SDK locations are:
-
-- macOS: `$HOME/Library/Android/sdk`
-- Linux: `$HOME/Android/Sdk`
-- Windows: `%LOCALAPPDATA%\Android\Sdk`
-
-For macOS or Linux, a shell configuration commonly includes:
+For macOS with the default location:
 
 ```bash
 export ANDROID_HOME="$HOME/Library/Android/sdk"
@@ -35,54 +30,33 @@ export PATH="$PATH:$ANDROID_HOME/platform-tools"
 export PATH="$PATH:$ANDROID_HOME/emulator"
 ```
 
-Adjust `ANDROID_HOME` for the SDK location on your machine, then open a new terminal.
-
 ## 2. Verify Android tools
 
 ```bash
 adb version
 adb start-server
 adb devices -l
-```
-
-The repository also provides a health check:
-
-```bash
 bash scripts/health_check.sh
 ```
 
-It verifies `adb`, starts the ADB server, lists devices, and reports the emulator version when the
-`emulator` command is available.
+The health check verifies ADB, starts its server, lists devices, and reports the emulator version
+when that command is available.
 
 ## 3. Prepare a device
 
-### Emulator
+Start an Android Virtual Device, or enable Developer options and USB debugging on a physical
+device. For hardware, unlock it and accept the RSA authorization prompt.
 
-Create and start an Android Virtual Device (AVD) from Android Studio's Device Manager. Wait for
-Android to finish booting, then run `adb devices -l`.
-
-### Physical device
-
-1. Enable Developer options.
-2. Enable USB debugging.
-3. Connect the device over USB.
-4. Unlock the device and accept the computer's RSA authorization prompt.
-5. Run `adb devices -l`.
-
-The expected state is `device`:
+The expected second-column state is `device`:
 
 ```text
 List of devices attached
 emulator-5554 device product:sdk_gphone64_arm64 model:sdk_gphone64_arm64
 ```
 
-Common non-ready states:
-
 - `unauthorized`: unlock the device and approve USB debugging.
-- `offline`: reconnect the device or restart the ADB server.
-- no rows: check the cable, USB mode, SDK path, or emulator status.
-
-To restart ADB:
+- `offline`: reconnect it or restart ADB.
+- No rows: check the cable, USB mode, SDK path, or emulator status.
 
 ```bash
 adb kill-server
@@ -90,55 +64,49 @@ adb start-server
 adb devices -l
 ```
 
-## 4. Install the Python project
-
-From the repository root:
+## 4. Install and run the project
 
 ```bash
 poetry install
-```
-
-Confirm the interpreter and test runner:
-
-```bash
 poetry run python --version
 poetry run pytest --version
 ```
 
-The project uses a `src/` layout. When running the module directly, expose that directory through
-`PYTHONPATH`:
+The project uses a `src/` layout, so expose it when running modules directly:
 
 ```bash
+# Android build properties
 PYTHONPATH=src poetry run python -m android_cookbook.device_info
+
+# Shell user, directory, kernel, and root entries
+PYTHONPATH=src poetry run python -m android_cookbook.shell_info
 ```
+
+Both select the first online device. The current `shell_info` implementation has a known defect:
+`cwd` duplicates kernel output even though `get_working_directory()` is available.
 
 ## 5. Run tests
 
-Unit tests mock `subprocess.run` and do not require Android hardware:
+Unit tests mock external boundaries and require no Android hardware:
 
 ```bash
 poetry run pytest tests/unit
+poetry run pytest tests/unit/test_shell.py -v
 ```
 
-Integration tests invoke the local `adb` executable and need at least one online device for all
-checks to execute:
+Integration tests invoke local ADB and need an online device:
 
 ```bash
 poetry run pytest tests/integration -m integration
+poetry run pytest tests/integration/test_shell.py -m integration -v
 ```
 
-The current unit tests expect dictionaries while the implementation returns `AdbDevice`
-instances. A mocked property test and one integration state check also contain typos, so the full
-suite is expected to fail until the test contract is corrected.
+The `integration` marker is registered in `pytest.ini`. Device checks skip when no device has
+state `device`. Run everything with `poetry run pytest` or `make test`.
 
 ## Optional development checks
-
-Install Git hooks:
 
 ```bash
 poetry run pre-commit install
 poetry run pre-commit run --all-files
 ```
-
-The configured hooks check whitespace, common file formats, Python syntax, imports, formatting,
-and Flake8 rules.
