@@ -8,7 +8,7 @@ pytestmark = pytest.mark.integration
 def test_at_least_one_device_is_avaiable():
     devices = list_devices()
 
-    online_devices = [device for device in devices if device.state == "deivce"]
+    online_devices = [device for device in devices if device.state == "device"]
 
     if not online_devices:
         pytest.skip("No Android device available")
