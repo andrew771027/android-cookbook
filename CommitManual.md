@@ -12,6 +12,7 @@ Before committing, review the items that apply to your change.
 
 ## Documentation
 
+- [ ] Docs should be Google like, human readable not AI generated
 - [ ] Update [README.md](README.md) if setup, commands, or output changed.
 - [ ] Update [Architecture](docs/architecture.md) if module responsibilities or data flow changed.
 - [ ] Update [Environment setup](docs/environment.md) if dependencies or setup steps changed.
