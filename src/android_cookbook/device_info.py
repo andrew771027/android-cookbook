@@ -1,7 +1,9 @@
 import json
+from dataclasses import asdict
 from typing import List
 
 from android_cookbook.adb import AdbDevice, get_property, list_devices
+from android_cookbook.properties import collect_device_properties
 
 
 def collect_device_info(serial: str) -> dict[str, str]:
@@ -23,10 +25,13 @@ def main() -> None:
         raise RuntimeError("No Android device available")
 
     target_device: AdbDevice = online_devices[0]
+    target_serial = target_device.serial
 
-    target_device_info = collect_device_info(target_device.serial)
+    target_properties = collect_device_properties(target_serial)
 
-    print(json.dumps(target_device_info, indent=2))
+    result = {"serial": target_serial, **asdict(target_properties)}
+
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":
