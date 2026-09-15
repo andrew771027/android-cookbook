@@ -1,30 +1,38 @@
+# Roadmap
 
-我會讓 Android Cookbook 從「Android CLI 使用者」慢慢走向「Android ecosystem engineer」：
+Android Cookbook starts with ADB commands and Python wrappers, then builds toward device
+inspection, testing, and automation.
 
-| Version | Topic | 核心能力 |
-|---|---|---|
-| **v0.1** | ADB Basics | device discovery、getprop |
-| v0.2 | ADB Shell | Linux / Android shell |
-| v0.3 | File System | `/data`、`/sdcard`、permission |
-| v0.4 | Package Manager | `pm list`、install、uninstall |
-| v0.5 | Activity Manager | `am start`、force-stop |
-| v0.6 | Dumpsys | Android services inspection |
-| v0.7 | Logcat | logs、filter、process |
-| v0.8 | Settings / SVC | system configuration |
-| v0.9 | Push / Pull | artifacts、files |
-| **v1.0** | Fastboot | bootloader / fastboot architecture |
+## Available recipes
 
-之後才進：
+| Recipe | What you can learn |
+| --- | --- |
+| [v0.1: ADB basics](docs/receipes/v0.1-adb-basics.md) | Discover devices and read a property |
+| [v0.2: ADB shell](docs/receipes/v0.2-adb-shell.md) | Run shell commands and inspect their output |
+| [v0.3: Android properties](docs/receipes/v0.3-properties.md) | Parse properties and collect device information |
 
-```text
-v1.x
-Android System Inspection
+Recipe numbers describe the learning sequence. The package version in `pyproject.toml`
+is currently `0.1.0`.
 
-v2.x
-Android Test Recipes
+## Planned topics
 
-v3.x
-Device Validation Recipes
+The following topics are planned. Version assignments remain open after the addition of
+the v0.3 properties recipe.
 
-v4.x
-Automation / CI integration
+| Topic | Commands and concepts |
+| --- | --- |
+| File system | `/data`, `/sdcard`, and permissions |
+| Package manager | List, install, and uninstall packages with `pm` |
+| Activity manager | Start activities and stop apps with `am` |
+| Android services | Inspect service state with `dumpsys` |
+| Logcat | Collect logs and filter by process |
+| System configuration | Read and change settings with `settings` and `svc` |
+| File transfer | Copy files with `adb push` and `adb pull` |
+| Fastboot | Understand the bootloader and fastboot commands |
+
+## Longer-term direction
+
+- **v1.x:** Android system inspection
+- **v2.x:** Android test recipes
+- **v3.x:** Device validation recipes
+- **v4.x:** Automation and continuous integration

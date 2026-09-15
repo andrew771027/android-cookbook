@@ -1,97 +1,91 @@
 # Android Cookbook
 
-Android Cookbook is a small Python learning project for automating common Android Debug Bridge
-(ADB) tasks. It discovers connected devices, reads Android system properties, and runs basic
-shell-inspection commands on a selected device.
+Learn to inspect Android devices with Android Debug Bridge (ADB) and Python. This project
+covers device discovery, shell commands, and system properties, with unit tests and tests
+that run on an emulator or physical device.
 
-## Features
+## Before you begin
 
-- Runs ADB commands through Python's `subprocess` module.
-- Parses `adb devices` into immutable `AdbDevice` values.
-- Reads properties from a specific device with `adb shell getprop`.
-- Runs tokenized device commands through a reusable `run_shell()` wrapper.
-- Reads the current user, working directory, kernel information, and root-directory entries.
-- Prints device or shell information as JSON using the first online device.
-- Separates mocked unit tests from tests that require a real device or emulator.
+Install Python 3.14 or later, Poetry 2.x, and Android SDK Platform Tools. To run device
+commands, connect an emulator or enable USB debugging on a physical device.
+See [Set up your environment](docs/environment.md) for instructions.
 
-## Project layout
+The shell examples use Bash or Zsh. Run project commands from the repository root.
 
-```text
-android-cookbook/
-├── src/android_cookbook/
-│   ├── adb.py                 # ADB process wrapper and device parsing
-│   ├── device_info.py         # Device-property JSON workflow
-│   ├── shell.py               # Device shell wrapper and inspection helpers
-│   └── shell_info.py          # Shell-information JSON workflow
-├── tests/
-│   ├── unit/                  # Tests with process boundaries mocked
-│   └── integration/           # Tests against ADB and an online device
-├── scripts/
-├── docs/
-│   ├── environment.md
-│   ├── architecture.md
-│   └── receipes/
-│       ├── v0.1-adb-basics.md
-│       └── v0.2-adb-shell.md
-├── Makefile
-├── pytest.ini
-└── pyproject.toml
-```
+## Get started
 
-## Requirements
-
-- Python 3.14 or newer
-- Poetry 2.x
-- Android SDK Platform Tools (`adb`)
-- An emulator or physical Android device for integration tests and live output
-
-See [Environment setup](docs/environment.md) for installation and device preparation.
-
-## Quick start
+Install dependencies and run the unit tests:
 
 ```bash
 poetry install
-poetry run pytest tests/unit
-PYTHONPATH=src poetry run python -m android_cookbook.device_info
-PYTHONPATH=src poetry run python -m android_cookbook.shell_info
+PYTHONPATH=src poetry run pytest tests/unit
 ```
 
-Before running commands against a device, confirm that it appears with state `device`:
+Check that your device appears with the state `device`:
 
 ```bash
 adb devices -l
 ```
 
-For a broader workstation check, run `bash scripts/health_check.sh`.
-
-## Tests
+Print its model, Android version, SDK level, and build properties as JSON:
 
 ```bash
-# No Android device required
-poetry run pytest tests/unit
-
-# Requires adb and an online device; checks skip when none is available
-poetry run pytest tests/integration -m integration
-
-# Entire suite
-poetry run pytest
+PYTHONPATH=src poetry run python -m android_cookbook.device_info
 ```
 
-Unit tests cover device parsing, property and shell command construction, and shell-output
-transformations. Integration tests use the first device whose ADB state is `device`.
+The command selects the first online device. For the output fields and examples, see
+[Read Android properties](docs/receipes/v0.3-properties.md).
 
-## Documentation
+To inspect the shell user, kernel, and root directory, run:
 
-- [Environment setup](docs/environment.md)
-- [Architecture](docs/architecture.md)
-- [v0.1 ADB basics recipe](docs/receipes/v0.1-adb-basics.md)
-- [v0.2 ADB shell recipe](docs/receipes/v0.2-adb-shell.md)
+```bash
+PYTHONPATH=src poetry run python -m android_cookbook.shell_info
+```
 
-## Current constraints
+**Known issue:** The shell command's `cwd` field currently repeats the kernel information.
+See [Shell output](docs/receipes/v0.2-adb-shell.md#5-print-shell-information) for details.
 
-- Both JSON workflows select the first online device; there is no CLI device selector.
-- Commands have no explicit timeout or domain-specific error translation.
-- `ProcessInfo` is defined for future process parsing but is not used yet.
-- `shell_info.py` currently populates `cwd` with `get_kernel_info()` instead of
-  `get_working_directory()`. The helper is implemented and unit-tested, but the JSON output
-  duplicates the kernel value until that wiring is corrected.
+## Run tests
+
+```bash
+# Unit tests: no device required
+PYTHONPATH=src poetry run pytest tests/unit
+
+# Integration tests: requires ADB and an online device
+PYTHONPATH=src poetry run pytest tests/integration -m integration
+
+# All tests
+PYTHONPATH=src poetry run pytest
+```
+
+Integration tests use the first online device and skip if none is connected. If ADB is
+missing or a command fails, the tests report an error.
+
+## Find your way around
+
+| Path | Contents |
+| --- | --- |
+| `src/android_cookbook/adb.py` | ADB execution and device discovery |
+| `src/android_cookbook/shell.py` | Shell commands and output handling |
+| `src/android_cookbook/properties.py` | Property reads, parsing, and collection |
+| `src/android_cookbook/device_info.py` | Device properties as JSON |
+| `src/android_cookbook/shell_info.py` | Shell information as JSON |
+| `tests/unit/` | Tests that replace ADB calls with sample responses |
+| `tests/integration/` | Tests that run commands on a device |
+| `scripts/health_check.sh` | ADB and emulator environment check |
+
+## Learn more
+
+- [Set up your environment](docs/environment.md)
+- [Understand the architecture](docs/architecture.md)
+- [v0.1: Run ADB from Python](docs/receipes/v0.1-adb-basics.md)
+- [v0.2: Inspect the Android shell](docs/receipes/v0.2-adb-shell.md)
+- [v0.3: Read Android properties](docs/receipes/v0.3-properties.md)
+- [Roadmap](Roadmap.md)
+- [Commit checklist](CommitManual.md)
+
+## Limitations
+
+The JSON commands always use the first online device and have no device-selection option.
+ADB calls have no timeout. Property collection requires an SDK value that Python can convert
+to an integer. See [Architecture](docs/architecture.md) for error handling and parser behavior.
