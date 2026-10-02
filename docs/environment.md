@@ -80,13 +80,21 @@ including when the package has not been installed into the active environment:
 # Android build properties
 PYTHONPATH=src poetry run python -m android_cookbook.device_info
 
+# Package installation status and APK paths
+PYTHONPATH=src poetry run python -m android_cookbook.package_info --package com.android.settings
+
 # Shell user, directory, kernel, and root entries
 PYTHONPATH=src poetry run python -m android_cookbook.shell_info
 ```
 
-Both commands select the first online device. For output examples and known issues, see
-[Android properties](receipes/v0.3-properties.md#4-print-json) and
-[ADB shell](receipes/v0.2-adb-shell.md#5-print-shell-information).
+All three commands select the first online device. For output examples and known issues, see
+[Android properties](receipes/v0.3-properties.md#4-print-json),
+[ADB shell](receipes/v0.2-adb-shell.md#5-print-shell-information), and
+[Package manager](receipes/v0.4-package-manager.md#3-print-a-package-report).
+
+Package inspection requires no extra dependencies. To try installation, supply a local test
+APK; use a disposable test app for uninstalling, clearing data, or changing enabled state.
+`make exec_package_info` runs the package report for `com.android.settings`.
 
 ## 5. Run tests
 

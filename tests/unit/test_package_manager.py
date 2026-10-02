@@ -236,10 +236,7 @@ def test_package_does_not_exists(monkeypatch):
 
 def test_parse_single_package_path():
 
-    output = (
-        "package:/system/priv-app/",
-        "Settings/Settings.apk\n",
-    )
+    output = "package:/system/priv-app/Settings/Settings.apk\n"
 
     actual = parse_package_paths(
         "com.android.settings",
@@ -248,9 +245,8 @@ def test_parse_single_package_path():
 
     assert actual == PackagePath(
         package_name="com.android.settings",
-        path=[
-            "/system/priv-app/",
-            "Settings/Settings.apk",
+        paths=[
+            "/system/priv-app/Settings/Settings.apk",
         ],
     )
 
@@ -272,7 +268,7 @@ def test_parse_multiple_package_paths():
         package_name="com.example.app",
         paths=[
             "/data/app/example/base.apk",
-            "/data/app/example/split_config.en.ap",
+            "/data/app/example/split_config.en.apk",
             "/data/app/example/split_config.xxhdpi.apk",
         ],
     )

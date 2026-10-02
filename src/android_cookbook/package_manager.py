@@ -5,7 +5,7 @@ from android_cookbook.adb import run_adb
 from android_cookbook.shell import run_shell
 
 
-@dataclass(forzen=True)
+@dataclass(frozen=True)
 class PackageInfo:
     name: str
 
@@ -66,7 +66,7 @@ def list_packages(
 ) -> list[PackageInfo]:
 
     if system_only and third_party_only:
-        raise ValueError("system_only and third_party_only cannot bot be True")
+        raise ValueError("system_only and third_party_only cannot both be True")
 
     if enabled_only and disabled_only:
         raise ValueError("enabled_only and disabled_only cannot both be True")
@@ -74,7 +74,7 @@ def list_packages(
     command = [
         "pm",
         "list",
-        "package",
+        "packages",
     ]
 
     if system_only:
