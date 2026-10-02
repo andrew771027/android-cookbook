@@ -1,6 +1,5 @@
 import pytest
 
-from android_cookbook.adb import list_devices
 from android_cookbook.package_manager import (
     get_package_path,
     list_packages,
@@ -10,44 +9,25 @@ from android_cookbook.package_manager import (
 pytestmark = pytest.mark.integration
 
 
-def get_online_device_serial() -> str:
+def test_package_manager_returns_package(android_serial):
 
-    devices = list_devices()
-
-    for device in devices:
-
-        if device.state == "device":
-
-            return device.serial
-
-    pytest.skip("No Android deivce avaiable")
-
-
-def test_package_manager_returns_package():
-
-    serial = get_online_device_serial()
-
-    packages = list_packages(serial)
+    packages = list_packages(android_serial)
 
     assert packages
 
 
-def test_android_settings_package_exists():
-
-    serial = get_online_device_serial()
+def test_android_settings_package_exists(android_serial):
 
     assert package_exists(
-        serial,
+        android_serial,
         "com.android.settings",
     )
 
 
-def test_settings_package_has_apk_path():
-
-    serial = get_online_device_serial()
+def test_settings_package_has_apk_path(android_serial):
 
     result = get_package_path(
-        serial,
+        android_serial,
         "com.android.settings",
     )
 
@@ -56,12 +36,10 @@ def test_settings_package_has_apk_path():
     assert any(path.endswith(".apk") for path in result.paths)
 
 
-def test_system_packages_are_available():
-
-    serial = get_online_device_serial()
+def test_system_packages_are_available(android_serial):
 
     packages = list_packages(
-        serial,
+        android_serial,
         system_only=True,
     )
 
