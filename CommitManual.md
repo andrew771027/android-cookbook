@@ -7,6 +7,7 @@ Before committing, review the items that apply to your change.
 - [ ] Review the diff for unintended changes.
 - [ ] Check that tests cover any behavior you changed.
 - [ ] Run `PYTHONPATH=src poetry run pytest tests/unit`.
+- [ ] Run `PYTHONPATH=src poetry run pytest tests/integration`.
 - [ ] For changes to device commands, run the relevant integration tests on an online device.
 - [ ] Run `git diff --check`.
 

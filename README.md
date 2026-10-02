@@ -1,8 +1,8 @@
 # Android Cookbook
 
 Learn to inspect Android devices with Android Debug Bridge (ADB) and Python. This project
-covers device discovery, shell commands, and system properties, with unit tests and tests
-that run on an emulator or physical device.
+covers device discovery, shell commands, system properties, and package management. Tests
+include unit tests and checks that run on an emulator or physical device.
 
 ## Before you begin
 
@@ -31,7 +31,12 @@ Print its model, Android version, SDK level, and build properties as JSON:
 
 ```bash
 PYTHONPATH=src poetry run python -m android_cookbook.device_info
+# Equivalent Makefile target
+make exec_device_info
 ```
+
+This target sets `PYTHONPATH=src` and runs `android_cookbook.device_info` with Poetry's
+`python3`. Install dependencies with `poetry install` and connect an online device first.
 
 The command selects the first online device. For the output fields and examples, see
 [Read Android properties](docs/receipes/v0.3-properties.md).
@@ -45,6 +50,17 @@ PYTHONPATH=src poetry run python -m android_cookbook.shell_info
 **Known issue:** The shell command's `cwd` field currently repeats the kernel information.
 See [Shell output](docs/receipes/v0.2-adb-shell.md#5-print-shell-information) for details.
 
+Inspect an installed package and its APK paths as JSON:
+
+```bash
+PYTHONPATH=src poetry run python -m android_cookbook.package_info --package com.android.settings
+# Equivalent Makefile target
+make exec_package_info
+```
+
+The command requires `--package` and selects the first online device. See
+[Package manager](docs/receipes/v0.4-package-manager.md) for example output and app management helpers.
+
 ## Run tests
 
 ```bash
@@ -52,7 +68,7 @@ See [Shell output](docs/receipes/v0.2-adb-shell.md#5-print-shell-information) fo
 PYTHONPATH=src poetry run pytest tests/unit
 
 # Integration tests: requires ADB and an online device
-PYTHONPATH=src poetry run pytest tests/integration -m integration
+PYTHONPATH=src poetry run pytest tests/integration
 
 # All tests
 PYTHONPATH=src poetry run pytest
@@ -67,6 +83,8 @@ missing or a command fails, the tests report an error.
 | --- | --- |
 | `src/android_cookbook/adb.py` | ADB execution and device discovery |
 | `src/android_cookbook/shell.py` | Shell commands and output handling |
+| `src/android_cookbook/package_manager.py` | Package queries, APK paths, and app management |
+| `src/android_cookbook/package_info.py` | Package installation status and APK paths as JSON |
 | `src/android_cookbook/properties.py` | Property reads, parsing, and collection |
 | `src/android_cookbook/device_info.py` | Device properties as JSON |
 | `src/android_cookbook/shell_info.py` | Shell information as JSON |
@@ -81,6 +99,7 @@ missing or a command fails, the tests report an error.
 - [v0.1: Run ADB from Python](docs/receipes/v0.1-adb-basics.md)
 - [v0.2: Inspect the Android shell](docs/receipes/v0.2-adb-shell.md)
 - [v0.3: Read Android properties](docs/receipes/v0.3-properties.md)
+- [v0.4: Inspect and manage packages](docs/receipes/v0.4-package-manager.md)
 - [Roadmap](Roadmap.md)
 - [Commit checklist](CommitManual.md)
 
