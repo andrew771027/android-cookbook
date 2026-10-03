@@ -14,7 +14,7 @@ pytestmark = [
 ]
 
 
-@pytest.mark.xfail
+@pytest.mark.skip
 def test_install_package(
     android_serial,
     test_apk,
@@ -41,7 +41,7 @@ def test_install_package(
     )
 
 
-@pytest.mark.xfail
+@pytest.mark.skip
 def test_installed_package_has_apk_path(
     android_serial,
     test_apk,
@@ -65,7 +65,7 @@ def test_installed_package_has_apk_path(
     assert any(path.endswith(".apk") for path in result.paths)
 
 
-@pytest.mark.xfail
+@pytest.mark.skip
 def test_clear_does_not_uninstall_package(
     android_serial,
     test_apk,
@@ -97,7 +97,7 @@ def test_clear_does_not_uninstall_package(
     )
 
 
-@pytest.mark.xfail
+@pytest.mark.skip
 def test_uninstall_removes_package(
     android_serial,
     test_apk,
@@ -129,7 +129,7 @@ def test_uninstall_removes_package(
     )
 
 
-@pytest.mark.xfail
+@pytest.mark.skip
 def test_full_package_lifecycle(
     android_serial,
     test_apk,

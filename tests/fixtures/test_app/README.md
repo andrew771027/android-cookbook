@@ -19,8 +19,20 @@ installation with this package name before and after each test.
 
 The lifecycle tests install the APK, inspect its paths, clear its data, verify that it
 remains installed, and uninstall it. The package manager API also exposes reinstallation,
-enabling, and disabling; the lifecycle integration tests do not exercise enable/disable.
+enabling, and disabling. The fixed-sequence lifecycle tests do not exercise enable/disable;
+the new lifecycle state machine tests include both operations.
 
 The APK fixture checks only that the file exists. An empty or invalid APK is passed to
 ADB and fails during installation. All five lifecycle integration tests currently have
-`xfail` markers; see the recipe for commands and how to interpret their results.
+unconditional `skip` markers, so their fixtures and device operations do not run.
+Provide a valid APK and remove those markers to enable the tests; see the recipe for
+commands and how to interpret their results.
+
+The state machine unit test uses an in-memory `FakePackageManager` and a fake APK path;
+it does not read this APK and runs without an Android device. The state machine integration
+test checks that this APK exists and is non-empty before device discovery, and calls
+`pytest.skip()` while the checked-in placeholder is empty. A non-empty file alone does
+not establish APK validity. Supply a valid APK and connect an online device to enable
+that test without changing a skip decorator. Each generated example removes the fixture
+package before its rules and again during teardown. See the
+[state machine recipe](../../../docs/receipes/v0.4.1-package-lifecycle.md#6-test-the-package-lifecycle-as-a-state-machine).

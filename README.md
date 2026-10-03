@@ -75,8 +75,12 @@ PYTHONPATH=src poetry run pytest
 ```
 
 Package lifecycle integration tests install, clear, and uninstall the disposable fixture
-app. The checked-in APK is empty, and those tests currently have `xfail` markers. See
+app when enabled. The checked-in APK is empty, and all five tests currently have unconditional
+`skip` markers, so their fixtures and device operations do not run. See
 [v0.4.1: Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) before running them.
+The lifecycle state machine unit test runs against an in-memory fake with a `100 × 30`
+example/step budget. Its device counterpart uses `3 × 5` and conditionally skips while
+the APK is missing or empty. See the recipe for model rules and enablement instructions.
 To run integration checks without tests marked destructive:
 
 ```bash
@@ -98,7 +102,7 @@ missing or a command fails, the tests report an error.
 | `src/android_cookbook/properties.py` | Property reads, parsing, and collection |
 | `src/android_cookbook/device_info.py` | Device properties as JSON |
 | `src/android_cookbook/shell_info.py` | Shell information as JSON |
-| `tests/unit/` | Tests that replace ADB calls with sample responses |
+| `tests/unit/` | Tests using sample responses and an in-memory lifecycle state machine |
 | `tests/integration/` | Tests that run commands on a device |
 | `tests/fixtures/test_app/` | Disposable app requirements and an empty APK placeholder |
 | `scripts/health_check.sh` | ADB and emulator environment check |

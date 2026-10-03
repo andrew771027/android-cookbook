@@ -190,7 +190,9 @@ ADB against the first online device.
 | `tests/unit/test_properties.py` | Property parsing, read arguments, output trimming, and collection with an integer SDK |
 | `tests/unit/test_package_manager.py` | Package parsing, list arguments, conflicting filters, existence, APK paths, clear responses, install options, missing APKs, and basic uninstall |
 | `tests/unit/test_package_lifecycle.py` | Successful result and package operation order with mocked helpers |
-| `tests/integration/test_package_lifecycle.py` | Install, APK paths, clear without removal, uninstall, and full sequence; all five tests marked `xfail` |
+| `tests/unit/test_package_lifecycle_state_machine.py` | Generated install/enable/disable/clear/uninstall sequences against an in-memory fake; 100 examples × up to 30 steps |
+| `tests/integration/test_package_lifecycle_state_machine.py` | Same intended model against real package manager helpers; 3 examples × up to 5 steps; skips for a missing/empty APK or no online device |
+| `tests/integration/test_package_lifecycle.py` | Install, APK paths, clear without removal, uninstall, and full sequence; all five tests unconditionally marked `skip` |
 | `tests/integration/test_package_manager.py` | Package listing, Settings existence and APK paths, and system packages |
 | `tests/integration/test_device.py` | Device discovery and numeric SDK output |
 | `tests/integration/test_shell.py` | Shell user, Linux kernel output, and a `system` root entry |
@@ -208,12 +210,24 @@ They do not test app mutations. Package unit tests do not directly cover enable/
 enabled/disabled flag construction, exact-name versus substring matching, or uninstalling
 with `keep_data=True`. The package JSON entry point is also untested.
 
-Lifecycle integration tests call package manager helpers directly, rather than the lifecycle
+The five fixed-sequence lifecycle integration tests call package manager helpers directly, rather than the lifecycle
 helper. Their function-scoped fixtures choose the first online device, check that the APK
 file exists, and remove the fixture package before and after each test. The checked-in APK
 is empty; file existence does not establish validity. All five tests carry `integration`,
-`destructive`, and non-strict `xfail` markers. Default test runs include them; XFAIL or XPASS
-is not evidence that the lifecycle helper passed on a device. XFAIL can also reflect
-a fixture setup failure before package operations begin.
+`destructive`, and unconditional `skip` markers. Default test runs report all five as
+skipped without running their fixtures or package operations. To enable them, provide a
+valid APK and remove the `skip` markers; the `destructive` marker alone does not disable
+a test.
 The lifecycle unit tests do not cover false results or exceptions. See the
 [lifecycle test instructions](receipes/v0.4.1-package-lifecycle.md#5-run-the-tests).
+
+The two lifecycle state machine tests separately define equivalent intended transitions
+for `NOT_INSTALLED`, `ENABLED`, and `DISABLED`. Hypothesis generates valid rule sequences
+and checks package presence and enabled/disabled listings against that model. The unit
+test exercises `FakePackageManager` in memory, so it does not test production ADB behavior.
+The integration test calls real package manager helpers, checks for a non-empty APK before
+device discovery, and resets the disposable package before and after each example using
+its own initialization and `teardown()`. It conditionally calls `pytest.skip()` while the
+checked-in APK is empty; providing a valid APK and online device enables it automatically.
+The `100 × 30` and `3 × 5` settings are example/step budgets, not fixed transition counts.
+See the [state machine recipe](receipes/v0.4.1-package-lifecycle.md#6-test-the-package-lifecycle-as-a-state-machine).
