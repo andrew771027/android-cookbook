@@ -112,7 +112,19 @@ PYTHONPATH=src poetry run pytest tests/integration -m integration
 PYTHONPATH=src poetry run pytest tests/integration/test_shell.py -m integration -v
 ```
 
-The `integration` marker is registered in `pytest.ini`. Device checks skip when no device has
+Package lifecycle tests also require a valid APK with package name
+`com.example.androidcookbook.fixture` at `tests/fixtures/test_app/cookbook-test-app.apk`.
+The checked-in file is empty; no additional Python dependency is needed. See the
+[test app requirements](../tests/fixtures/test_app/README.md) and
+[lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for preparation and current `xfail` markers.
+These tests uninstall an existing fixture package, install it, clear its data, and remove it.
+To exclude tests marked destructive:
+
+```bash
+PYTHONPATH=src poetry run pytest tests/integration -m "integration and not destructive"
+```
+
+The `integration` and `destructive` markers are registered in `pytest.ini`. Device checks skip when no device has
 state `device`. Missing ADB or failed commands cause errors.
 Run all tests with `PYTHONPATH=src poetry run pytest` or `make test`.
 
