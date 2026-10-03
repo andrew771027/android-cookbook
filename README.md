@@ -74,6 +74,19 @@ PYTHONPATH=src poetry run pytest tests/integration
 PYTHONPATH=src poetry run pytest
 ```
 
+Package lifecycle integration tests install, clear, and uninstall the disposable fixture
+app when enabled. The checked-in APK is empty, and all five tests currently have unconditional
+`skip` markers, so their fixtures and device operations do not run. See
+[v0.4.1: Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) before running them.
+The lifecycle state machine unit test runs against an in-memory fake with a `100 × 30`
+example/step budget. Its device counterpart uses `3 × 5` and conditionally skips while
+the APK is missing or empty. See the recipe for model rules and enablement instructions.
+To run integration checks without tests marked destructive:
+
+```bash
+PYTHONPATH=src poetry run pytest tests/integration -m "integration and not destructive"
+```
+
 Integration tests use the first online device and skip if none is connected. If ADB is
 missing or a command fails, the tests report an error.
 
@@ -84,12 +97,14 @@ missing or a command fails, the tests report an error.
 | `src/android_cookbook/adb.py` | ADB execution and device discovery |
 | `src/android_cookbook/shell.py` | Shell commands and output handling |
 | `src/android_cookbook/package_manager.py` | Package queries, APK paths, and app management |
+| `src/android_cookbook/package_lifecycle.py` | Install, inspect, clear, uninstall, and collect lifecycle results |
 | `src/android_cookbook/package_info.py` | Package installation status and APK paths as JSON |
 | `src/android_cookbook/properties.py` | Property reads, parsing, and collection |
 | `src/android_cookbook/device_info.py` | Device properties as JSON |
 | `src/android_cookbook/shell_info.py` | Shell information as JSON |
-| `tests/unit/` | Tests that replace ADB calls with sample responses |
+| `tests/unit/` | Tests using sample responses and an in-memory lifecycle state machine |
 | `tests/integration/` | Tests that run commands on a device |
+| `tests/fixtures/test_app/` | Disposable app requirements and an empty APK placeholder |
 | `scripts/health_check.sh` | ADB and emulator environment check |
 
 ## Learn more
@@ -100,6 +115,7 @@ missing or a command fails, the tests report an error.
 - [v0.2: Inspect the Android shell](docs/receipes/v0.2-adb-shell.md)
 - [v0.3: Read Android properties](docs/receipes/v0.3-properties.md)
 - [v0.4: Inspect and manage packages](docs/receipes/v0.4-package-manager.md)
+- [v0.4.1: Test the package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md)
 - [Roadmap](Roadmap.md)
 - [Commit checklist](CommitManual.md)
 

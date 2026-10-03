@@ -6,6 +6,7 @@ All device commands pass through `run_adb()` in `adb.py`, which starts the local
 ```mermaid
 flowchart TD
     DeviceInfo["device_info.main()"] --> Properties["properties.py"]
+    PackageLifecycle["run_package_lifecycle()"] --> PackageManager
     PackageInfo["package_info.main()"] --> PackageManager["package_manager.py"]
     PackageManager --> Shell
     PackageManager --> Adb
@@ -30,6 +31,7 @@ The diagram shows property, shell, and package command paths. All three `main()`
 | [`adb.py`](../src/android_cookbook/adb.py) | Run ADB, list devices, and provide the original property reader |
 | [`shell.py`](../src/android_cookbook/shell.py) | Run commands on a selected device and parse shell output |
 | [`package_manager.py`](../src/android_cookbook/package_manager.py) | Query packages and APK paths; install, uninstall, clear, enable, and disable apps |
+| [`package_lifecycle.py`](../src/android_cookbook/package_lifecycle.py) | Sequence package operations and return lifecycle observations |
 | [`package_info.py`](../src/android_cookbook/package_info.py) | Select a device and print a package report as JSON |
 | [`properties.py`](../src/android_cookbook/properties.py) | Read and parse properties; collect a device report |
 | [`device_info.py`](../src/android_cookbook/device_info.py) | Select a device and print its properties as JSON |
@@ -124,6 +126,20 @@ Both return stripped standard output. They do not catch command failures.
 though the list stored in `PackagePath.paths` can still be modified.
 See the [package recipe](receipes/v0.4-package-manager.md) for commands and return values.
 
+### Package lifecycle
+
+`run_package_lifecycle(serial, apk_path, package_name)` calls package manager helpers in
+this order: install with `replace=True`, check existence, read APK paths, clear, check
+existence, uninstall without retaining data, and check absence. It returns a frozen
+`PackageLifecycleResult` containing the package name, APK paths, and five Boolean observations.
+The path list remains mutable. Installation output is ignored; the uninstall flag requires
+stripped output to equal `Success`.
+
+The helper does not assert success, validate the APK package name, or provide a CLI.
+Exceptions pass through, and there is no guaranteed cleanup if a command raises before
+uninstallation. Integration fixtures provide separate setup and teardown around tests.
+See the [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for fields and examples.
+
 ## JSON commands
 
 All three entry points select the first online device. If none is available, they raise
@@ -173,6 +189,10 @@ ADB against the first online device.
 | `tests/unit/test_shell.py` | Shell arguments, result fields, user, working directory, and root entries |
 | `tests/unit/test_properties.py` | Property parsing, read arguments, output trimming, and collection with an integer SDK |
 | `tests/unit/test_package_manager.py` | Package parsing, list arguments, conflicting filters, existence, APK paths, clear responses, install options, missing APKs, and basic uninstall |
+| `tests/unit/test_package_lifecycle.py` | Successful result and package operation order with mocked helpers |
+| `tests/unit/test_package_lifecycle_state_machine.py` | Generated install/enable/disable/clear/uninstall sequences against an in-memory fake; 100 examples × up to 30 steps |
+| `tests/integration/test_package_lifecycle_state_machine.py` | Same intended model against real package manager helpers; 3 examples × up to 5 steps; skips for a missing/empty APK or no online device |
+| `tests/integration/test_package_lifecycle.py` | Install, APK paths, clear without removal, uninstall, and full sequence; all five tests unconditionally marked `skip` |
 | `tests/integration/test_package_manager.py` | Package listing, Settings existence and APK paths, and system packages |
 | `tests/integration/test_device.py` | Device discovery and numeric SDK output |
 | `tests/integration/test_shell.py` | Shell user, Linux kernel output, and a `system` root entry |
@@ -185,7 +205,29 @@ The suite does not directly test the JSON entry points, SDK conversion failures,
 malformed property format. The bulk-property unit test checks parsed output but does not
 assert command arguments. For commands to run the tests, see [Run tests](../README.md#run-tests).
 
-Package integration tests only query device state and assume `com.android.settings` exists.
+Package manager integration tests only query device state and assume `com.android.settings` exists.
 They do not test app mutations. Package unit tests do not directly cover enable/disable,
 enabled/disabled flag construction, exact-name versus substring matching, or uninstalling
 with `keep_data=True`. The package JSON entry point is also untested.
+
+The five fixed-sequence lifecycle integration tests call package manager helpers directly, rather than the lifecycle
+helper. Their function-scoped fixtures choose the first online device, check that the APK
+file exists, and remove the fixture package before and after each test. The checked-in APK
+is empty; file existence does not establish validity. All five tests carry `integration`,
+`destructive`, and unconditional `skip` markers. Default test runs report all five as
+skipped without running their fixtures or package operations. To enable them, provide a
+valid APK and remove the `skip` markers; the `destructive` marker alone does not disable
+a test.
+The lifecycle unit tests do not cover false results or exceptions. See the
+[lifecycle test instructions](receipes/v0.4.1-package-lifecycle.md#5-run-the-tests).
+
+The two lifecycle state machine tests separately define equivalent intended transitions
+for `NOT_INSTALLED`, `ENABLED`, and `DISABLED`. Hypothesis generates valid rule sequences
+and checks package presence and enabled/disabled listings against that model. The unit
+test exercises `FakePackageManager` in memory, so it does not test production ADB behavior.
+The integration test calls real package manager helpers, checks for a non-empty APK before
+device discovery, and resets the disposable package before and after each example using
+its own initialization and `teardown()`. It conditionally calls `pytest.skip()` while the
+checked-in APK is empty; providing a valid APK and online device enables it automatically.
+The `100 × 30` and `3 × 5` settings are example/step budgets, not fixed transition counts.
+See the [state machine recipe](receipes/v0.4.1-package-lifecycle.md#6-test-the-package-lifecycle-as-a-state-machine).

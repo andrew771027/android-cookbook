@@ -11,14 +11,15 @@ inspection, testing, and automation.
 | [v0.2: ADB shell](docs/receipes/v0.2-adb-shell.md) | Run shell commands and inspect their output |
 | [v0.3: Android properties](docs/receipes/v0.3-properties.md) | Parse properties and collect device information |
 | [v0.4: Package manager](docs/receipes/v0.4-package-manager.md) | Discover packages, inspect APK paths, and manage test apps |
+| [v0.4.1: Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) | Combine package operations and use fixtures for device setup and cleanup |
 
 Recipe numbers describe the learning sequence. The package version in `pyproject.toml`
-is currently `0.4.0`.
+is currently `0.4.1`.
 
 ## Planned topics
 
 The following topics are planned. Version assignments remain open after the addition of
-the v0.4 package manager recipe.
+the v0.4.1 package lifecycle recipe.
 
 | Topic | Commands and concepts |
 | --- | --- |

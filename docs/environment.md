@@ -13,7 +13,7 @@ The command examples use Bash or Zsh; run project commands from the repository r
 | Android SDK Platform Tools | Yes | Provides `adb` and `fastboot` |
 | Android Emulator or physical device | For device commands | Runs integration tests and supplies live output |
 
-Poetry installs `pytest` and `pre-commit` from the project dependencies.
+Poetry installs `pytest`, `hypothesis`, and `pre-commit` from the project dependencies.
 
 ## 1. Install Android Platform Tools
 
@@ -112,7 +112,30 @@ PYTHONPATH=src poetry run pytest tests/integration -m integration
 PYTHONPATH=src poetry run pytest tests/integration/test_shell.py -m integration -v
 ```
 
-The `integration` marker is registered in `pytest.ini`. Device checks skip when no device has
+Package lifecycle integration tests also require a valid APK with package name
+`com.example.androidcookbook.fixture` at `tests/fixtures/test_app/cookbook-test-app.apk`.
+The checked-in file is empty. See the
+[test app requirements](../tests/fixtures/test_app/README.md) and
+[lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for preparation and current `skip` markers.
+The five fixed-sequence tests are unconditionally skipped before fixture setup. When
+enabled by removing the `skip` markers, they uninstall an existing fixture package, install it, clear its data,
+and remove it.
+
+The state machine unit test uses Hypothesis with an in-memory fake (`100` examples,
+up to `30` steps) and needs no APK or device. Hypothesis is installed by `poetry install`.
+The integration state machine uses `3` examples with up to `5` steps and conditionally
+skips if the APK is missing or empty, before checking for an online device. Supply a
+valid APK and device to enable it; no skip decorator needs to be removed for that test.
+See the [state machine recipe](receipes/v0.4.1-package-lifecycle.md#6-test-the-package-lifecycle-as-a-state-machine)
+for commands and cleanup behavior.
+
+To exclude tests marked destructive:
+
+```bash
+PYTHONPATH=src poetry run pytest tests/integration -m "integration and not destructive"
+```
+
+The `integration` and `destructive` markers are registered in `pytest.ini`. Device checks skip when no device has
 state `device`. Missing ADB or failed commands cause errors.
 Run all tests with `PYTHONPATH=src poetry run pytest` or `make test`.
 

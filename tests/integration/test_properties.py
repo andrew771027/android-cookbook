@@ -1,54 +1,38 @@
 import pytest
 
-from android_cookbook.adb import list_devices
-from android_cookbook.properties import collect_device_properties, get_all_properties, get_property
+from android_cookbook.properties import (
+    collect_device_properties,
+    get_all_properties,
+    get_property,
+)
 
 pytestmark = pytest.mark.integration
 
 
-def get_online_device_serial() -> str:
+def test_can_read_product_model(android_serial):
 
-    devices = list_devices()
-
-    for device in devices:
-        if device.state == "device":
-            return device.serial
-
-    pytest.skip("No Android device available")
-
-
-def test_can_read_product_model():
-
-    serial = get_online_device_serial()
-
-    model = get_property(serial, "ro.product.model")
+    model = get_property(android_serial, "ro.product.model")
 
     assert model
 
 
-def test_can_read_sdk_level():
+def test_can_read_sdk_level(android_serial):
 
-    serial = get_online_device_serial()
-
-    sdk = get_property(serial, "ro.build.version.sdk")
+    sdk = get_property(android_serial, "ro.build.version.sdk")
 
     assert sdk.isdigit()
 
 
-def test_can_read_android_version():
+def test_can_read_android_version(android_serial):
 
-    serial = get_online_device_serial()
-
-    version = get_property(serial, "ro.build.version.release")
+    version = get_property(android_serial, "ro.build.version.release")
 
     assert version
 
 
-def test_get_all_properties_returns_properties():
+def test_get_all_properties_returns_properties(android_serial):
 
-    serial = get_online_device_serial()
-
-    properties = get_all_properties(serial)
+    properties = get_all_properties(android_serial)
 
     assert properties
 
@@ -57,11 +41,9 @@ def test_get_all_properties_returns_properties():
     assert "ro.product.model" in property_names
 
 
-def test_collect_device_properties():
+def test_collect_device_properties(android_serial):
 
-    serial = get_online_device_serial()
-
-    info = collect_device_properties(serial)
+    info = collect_device_properties(android_serial)
 
     assert info.model
     assert info.manufacturer
