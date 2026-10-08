@@ -3,3 +3,10 @@
 .hypothesis
 .DS_Store
 __pycache__
+
+# Android fixture build output
+fixtures/test-app/.gradle/
+fixtures/test-app/app/build/
+
+# Generated test APK
+tests/fixtures/*.apk
