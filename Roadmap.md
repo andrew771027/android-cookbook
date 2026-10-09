@@ -13,13 +13,15 @@ inspection, testing, and automation.
 | [v0.4: Package manager](docs/receipes/v0.4-package-manager.md) | Discover packages, inspect APK paths, and manage test apps |
 | [v0.4.1: Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) | Combine package operations and use fixtures for device setup and cleanup |
 
+| [v0.4.2: Test APK fixture](docs/receipes/v0.4.2-test-apk-fixture.md) | Set up Android build tools, build a disposable APK, and validate it on an emulator |
+
 Recipe numbers describe the learning sequence. The package version in `pyproject.toml`
-is currently `0.4.1`.
+is currently `0.4.2`.
 
 ## Planned topics
 
 The following topics are planned. Version assignments remain open after the addition of
-the v0.4.1 package lifecycle recipe.
+the v0.4.2 test APK fixture recipe.
 
 | Topic | Commands and concepts |
 | --- | --- |

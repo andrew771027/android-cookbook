@@ -113,13 +113,17 @@ PYTHONPATH=src poetry run pytest tests/integration/test_shell.py -m integration 
 ```
 
 Package lifecycle integration tests also require a valid APK with package name
-`com.example.androidcookbook.fixture` at `tests/fixtures/test_app/cookbook-test-app.apk`.
-The checked-in file is empty. See the
-[test app requirements](../tests/fixtures/test_app/README.md) and
-[lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for preparation and current `skip` markers.
-The five fixed-sequence tests are unconditionally skipped before fixture setup. When
-enabled by removing the `skip` markers, they uninstall an existing fixture package, install it, clear its data,
-and remove it.
+`com.example.androidcookbook.fixture` at `tests/fixtures/test-app/cookbook-test-app.apk`.
+Build it with `./scripts/build-test-apk.sh` before running the device tests. Building
+requires JDK 17, Gradle 9.3.1, Android SDK Platform 36, and Build Tools 36.0.0 from
+Android Environment. Platform Tools alone does not provide the APK build tools.
+Follow [Build the test APK](receipes/v0.4.2-test-apk-fixture.md#build-the-test-apk)
+for installation and SDK configuration, including the macOS Homebrew workaround.
+Use an emulator or device running API 31 or later.
+
+The five fixed-sequence tests run when the APK and an online device are available.
+Their fixtures uninstall the disposable package before and after each test. See the
+[lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for commands and cleanup behavior.
 
 The state machine unit test uses Hypothesis with an in-memory fake (`100` examples,
 up to `30` steps) and needs no APK or device. Hypothesis is installed by `poetry install`.
