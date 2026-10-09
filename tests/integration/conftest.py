@@ -24,10 +24,10 @@ def test_apk() -> Path:
 
     project_root = Path(__file__).resolve().parents[2]
 
-    apk = project_root / "tests" / "fixtures" / "test_app" / "cookbook-test-app.apk"
+    apk = project_root / "tests" / "fixtures" / "test-app" / "cookbook-test-app.apk"
 
     if not apk.exists():
-        pytest.skip(f"Test APK not found: {apk}")
+        pytest.skip("Test APK not found. " "Run ./scripts/build-test-apk.sh first.")
 
     return apk
 

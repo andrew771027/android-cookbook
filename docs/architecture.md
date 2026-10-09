@@ -118,7 +118,7 @@ Boolean based on an exact `Success` response; enable and disable return stripped
 Only the disable helper exposes `user_id`, defaulting to `0`.
 
 `install_apk()` checks that the host path exists, then calls `run_adb()` with
-`-s <serial> install`, optional `-r` and `-g`, and the path. `uninstall_package()` calls
+`-s <serial> install`, optional `-r`, `-t` (`allow_test_packages=True`), and `-g`, and the path. `uninstall_package()` calls
 `run_adb()` with `-s <serial> uninstall`, optional `-k`, and the package name.
 Both return stripped standard output. They do not catch command failures.
 
@@ -129,7 +129,7 @@ See the [package recipe](receipes/v0.4-package-manager.md) for commands and retu
 ### Package lifecycle
 
 `run_package_lifecycle(serial, apk_path, package_name)` calls package manager helpers in
-this order: install with `replace=True`, check existence, read APK paths, clear, check
+this order: install with `replace=True` and `allow_test_packages=True`, check existence, read APK paths, clear, check
 existence, uninstall without retaining data, and check absence. It returns a frozen
 `PackageLifecycleResult` containing the package name, APK paths, and five Boolean observations.
 The path list remains mutable. Installation output is ignored; the uninstall flag requires
@@ -139,6 +139,16 @@ The helper does not assert success, validate the APK package name, or provide a 
 Exceptions pass through, and there is no guaranteed cleanup if a command raises before
 uninstallation. Integration fixtures provide separate setup and teardown around tests.
 See the [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for fields and examples.
+
+### Test APK build flow
+
+The Android project in `fixtures/test-app` supplies the disposable package used by
+integration tests. `scripts/build-test-apk.sh` runs `./gradlew assembleDebug` in that
+project, then copies `app/build/outputs/apk/debug/app-debug.apk` to
+`tests/fixtures/test-app/cookbook-test-app.apk`. The APK is generated locally and ignored
+by Git. Building requires JDK 17 and the Android Environment SDK with Platform 36 and
+Build Tools 36.0.0; running the tests also requires an online Android device.
+See [Build the test APK](receipes/v0.4.2-test-apk-fixture.md#build-the-test-apk).
 
 ## JSON commands
 
@@ -192,7 +202,7 @@ ADB against the first online device.
 | `tests/unit/test_package_lifecycle.py` | Successful result and package operation order with mocked helpers |
 | `tests/unit/test_package_lifecycle_state_machine.py` | Generated install/enable/disable/clear/uninstall sequences against an in-memory fake; 100 examples × up to 30 steps |
 | `tests/integration/test_package_lifecycle_state_machine.py` | Same intended model against real package manager helpers; 3 examples × up to 5 steps; skips for a missing/empty APK or no online device |
-| `tests/integration/test_package_lifecycle.py` | Install, APK paths, clear without removal, uninstall, and full sequence; all five tests unconditionally marked `skip` |
+| `tests/integration/test_package_lifecycle.py` | Install, APK paths, clear without removal, uninstall, and full sequence; requires the built fixture APK and an online device |
 | `tests/integration/test_package_manager.py` | Package listing, Settings existence and APK paths, and system packages |
 | `tests/integration/test_device.py` | Device discovery and numeric SDK output |
 | `tests/integration/test_shell.py` | Shell user, Linux kernel output, and a `system` root entry |
@@ -212,12 +222,10 @@ with `keep_data=True`. The package JSON entry point is also untested.
 
 The five fixed-sequence lifecycle integration tests call package manager helpers directly, rather than the lifecycle
 helper. Their function-scoped fixtures choose the first online device, check that the APK
-file exists, and remove the fixture package before and after each test. The checked-in APK
-is empty; file existence does not establish validity. All five tests carry `integration`,
-`destructive`, and unconditional `skip` markers. Default test runs report all five as
-skipped without running their fixtures or package operations. To enable them, provide a
-valid APK and remove the `skip` markers; the `destructive` marker alone does not disable
-a test.
+file exists, and remove the fixture package before and after each test. The generated APK comes from `fixtures/test-app` through `scripts/build-test-apk.sh`
+and is ignored by Git. Tests skip if the expected APK is missing or no device is online.
+All five carry `integration` and `destructive` markers and run without removing decorators.
+The `destructive` marker alone does not disable a test.
 The lifecycle unit tests do not cover false results or exceptions. See the
 [lifecycle test instructions](receipes/v0.4.1-package-lifecycle.md#5-run-the-tests).
 
@@ -227,7 +235,7 @@ and checks package presence and enabled/disabled listings against that model. Th
 test exercises `FakePackageManager` in memory, so it does not test production ADB behavior.
 The integration test calls real package manager helpers, checks for a non-empty APK before
 device discovery, and resets the disposable package before and after each example using
-its own initialization and `teardown()`. It conditionally calls `pytest.skip()` while the
-checked-in APK is empty; providing a valid APK and online device enables it automatically.
+its own initialization and `teardown()`. It conditionally calls `pytest.skip()` if the APK is missing or empty; providing a valid
+APK and online device enables it automatically.
 The `100 × 30` and `3 × 5` settings are example/step budgets, not fixed transition counts.
 See the [state machine recipe](receipes/v0.4.1-package-lifecycle.md#6-test-the-package-lifecycle-as-a-state-machine).

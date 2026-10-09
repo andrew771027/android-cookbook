@@ -83,7 +83,7 @@ class PackageLifecycleStateMachine(RuleBasedStateMachine):
         # =====================================================
         self.temp_dir = TemporaryDirectory()
 
-        self.apk_path = Path(self.temp_dir.name) / "cookbook-test_app.apk"
+        self.apk_path = Path(self.temp_dir.name) / "cookbook-test-app.apk"
         self.apk_path.write_bytes(b"fake apk content")
 
         # =====================================================
@@ -378,6 +378,8 @@ class PackageLifecycleStateMachine(RuleBasedStateMachine):
         result = package_manager.install_apk(
             self.serial,
             self.apk_path,
+            replace=True,
+            allow_test_packages=True,
         )
 
         assert result == "Success"

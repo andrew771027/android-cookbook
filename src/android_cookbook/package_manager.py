@@ -210,6 +210,7 @@ def install_apk(
     *,
     replace: bool = False,
     grant_permissions: bool = False,
+    allow_test_packages: bool = False,
 ) -> str:
 
     path = Path(apk_path)
@@ -228,6 +229,9 @@ def install_apk(
 
     if grant_permissions:
         command.append("-g")
+
+    if allow_test_packages:
+        command.append("-t")
 
     command.append(str(path))
 

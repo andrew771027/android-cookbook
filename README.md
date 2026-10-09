@@ -10,6 +10,12 @@ Install Python 3.14 or later, Poetry 2.x, and Android SDK Platform Tools. To run
 commands, connect an emulator or enable USB debugging on a physical device.
 See [Set up your environment](docs/environment.md) for instructions.
 
+To build the test APK, use JDK 17 and Gradle 9.3.1 together with the Android
+Environment SDK and build tools: Android SDK Platform 36 and Build Tools 36.0.0.
+Platform Tools provides ADB; APK compilation also needs the SDK platform and Build Tools.
+Follow [Build the test APK](docs/receipes/v0.4.2-test-apk-fixture.md#build-the-test-apk)
+for Gradle installation, the macOS Homebrew workaround, SDK setup, and build commands.
+
 The shell examples use Bash or Zsh. Run project commands from the repository root.
 
 ## Get started
@@ -74,13 +80,20 @@ PYTHONPATH=src poetry run pytest tests/integration
 PYTHONPATH=src poetry run pytest
 ```
 
-Package lifecycle integration tests install, clear, and uninstall the disposable fixture
-app when enabled. The checked-in APK is empty, and all five tests currently have unconditional
-`skip` markers, so their fixtures and device operations do not run. See
-[v0.4.1: Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) before running them.
-The lifecycle state machine unit test runs against an in-memory fake with a `100 × 30`
-example/step budget. Its device counterpart uses `3 × 5` and conditionally skips while
-the APK is missing or empty. See the recipe for model rules and enablement instructions.
+Build the disposable APK before running package lifecycle integration tests:
+
+```bash
+./scripts/build-test-apk.sh
+```
+
+The tests install, inspect, clear, and uninstall the fixture app on the first online
+device. The state machine also enables and disables it. Use an Android Environment
+emulator running API 31 or later. See [Build the test APK](docs/receipes/v0.4.2-test-apk-fixture.md)
+for setup and [Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) for test behavior.
+The state machine uses a `100 × 30` example/step budget in unit tests and `3 × 5`
+on a device. Device tests skip when the required APK or an online device is unavailable;
+the state machine also rejects an empty APK before connecting to the device.
+
 To run integration checks without tests marked destructive:
 
 ```bash
@@ -104,7 +117,9 @@ missing or a command fails, the tests report an error.
 | `src/android_cookbook/shell_info.py` | Shell information as JSON |
 | `tests/unit/` | Tests using sample responses and an in-memory lifecycle state machine |
 | `tests/integration/` | Tests that run commands on a device |
-| `tests/fixtures/test_app/` | Disposable app requirements and an empty APK placeholder |
+| `tests/fixtures/test-app/` | Generated test APK and fixture requirements |
+| `fixtures/test-app/` | Android source and Gradle Wrapper scripts for the test APK |
+| `scripts/build-test-apk.sh` | Build the fixture and copy its APK to the integration test path |
 | `scripts/health_check.sh` | ADB and emulator environment check |
 
 ## Learn more
@@ -116,6 +131,7 @@ missing or a command fails, the tests report an error.
 - [v0.3: Read Android properties](docs/receipes/v0.3-properties.md)
 - [v0.4: Inspect and manage packages](docs/receipes/v0.4-package-manager.md)
 - [v0.4.1: Test the package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md)
+- [v0.4.2: Build the test APK](docs/receipes/v0.4.2-test-apk-fixture.md)
 - [Roadmap](Roadmap.md)
 - [Commit checklist](CommitManual.md)
 
