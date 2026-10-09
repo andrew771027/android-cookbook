@@ -6,10 +6,8 @@ pluginManagement {
     }
 }
 
-dependencyResolutionManagement{
-    respositoriesMode.set(
-        respositoriesMode.FAIL_ON_PROJECT_REPORS
-    )
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
     repositories {
         google()

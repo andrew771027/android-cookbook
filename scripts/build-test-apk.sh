@@ -3,7 +3,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(
-    cd "$(dirname "${BASH_SOURCE[0]}")/.." && 
+    cd "$(dirname "${BASH_SOURCE[0]}")/.." &&
     pwd
 )"
 
@@ -11,7 +11,7 @@ FIXTURE_DIR="${PROJECT_ROOT}/fixtures/test-app"
 
 APK_SOURCE="${FIXTURE_DIR}/app/build/outputs/apk/debug/app-debug.apk"
 
-OUTPUT_DIR="${PROJECT_ROOT}/tests/fixutes"
+OUTPUT_DIR="${PROJECT_ROOT}/tests/fixtures/test-app"
 
 APK_OUTPUT="${OUTPUT_DIR}/cookbook-test-app.apk"
 

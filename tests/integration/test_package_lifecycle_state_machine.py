@@ -18,7 +18,7 @@ from android_cookbook.package_manager import (
 
 PACKAGE_NAME = "com.example.androidcookbook.fixture"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-APK_PATH = PROJECT_ROOT / "tests" / "fixtures" / "test_app" / "cookbook-test-app.apk"
+APK_PATH = PROJECT_ROOT / "tests" / "fixtures" / "test-app" / "cookbook-test-app.apk"
 
 
 class PackageState(Enum):
@@ -69,7 +69,15 @@ class AndroidPackageLifecycleStateMachine(RuleBasedStateMachine):
     @precondition(lambda self: self.state == PackageState.NOT_INSTALLED)
     @rule()
     def install(self):
-        assert install_apk(self.serial, self.apk_path).strip() == "Success"
+        assert (
+            install_apk(
+                self.serial,
+                self.apk_path,
+                replace=True,
+                allow_test_packages=True,
+            ).strip()
+            == "Performing Streamed Install\nSuccess"
+        )
         assert package_exists(self.serial, self.package_name)
         # Establish enabled state explicitly instead of assuming the APK default.
         enable_package(self.serial, self.package_name)
@@ -111,8 +119,16 @@ class AndroidPackageLifecycleStateMachine(RuleBasedStateMachine):
     def enabled_state_matches_model(self):
         if self.state == PackageState.NOT_INSTALLED:
             return
-        enabled = list_packages(self.serial, enabled_only=True, filter_text=self.package_name)
-        disabled = list_packages(self.serial, disabled_only=True, filter_text=self.package_name)
+        enabled = list_packages(
+            self.serial,
+            enabled_only=True,
+            filter_text=self.package_name,
+        )
+        disabled = list_packages(
+            self.serial,
+            disabled_only=True,
+            filter_text=self.package_name,
+        )
         assert any(package.name == self.package_name for package in enabled) == (
             self.state == PackageState.ENABLED
         )

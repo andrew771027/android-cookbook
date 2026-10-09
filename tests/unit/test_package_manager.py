@@ -380,6 +380,8 @@ def test_install_apk(
     actual = install_apk(
         "emulator-5554",
         apk,
+        replace=True,
+        allow_test_packages=True,
     )
 
     assert actual == "Success"
@@ -388,6 +390,8 @@ def test_install_apk(
         "-s",
         "emulator-5554",
         "install",
+        "-r",
+        "-t",
         str(apk),
     )
 
@@ -418,6 +422,7 @@ def test_install_apk_with_options(monkeypatch, tmp_path):
         apk,
         replace=True,
         grant_permissions=True,
+        allow_test_packages=True,
     )
 
     assert captured_args == (
@@ -426,6 +431,7 @@ def test_install_apk_with_options(monkeypatch, tmp_path):
         "install",
         "-r",
         "-g",
+        "-t",
         str(apk),
     )
 

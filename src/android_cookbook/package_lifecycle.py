@@ -28,7 +28,12 @@ def run_package_lifecycle(
     package_name: str,
 ) -> PackageLifecycleResult:
 
-    install_apk(serial, apk_path, replace=True),
+    install_apk(
+        serial,
+        apk_path,
+        replace=True,
+        allow_test_packages=True,
+    ),
 
     installed = package_exists(
         serial,
