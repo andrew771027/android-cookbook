@@ -1,8 +1,9 @@
-from __futire__ import annotations
+from __future__ import annotations
 
 import re
 import subprocess
 from dataclasses import dataclass
+
 
 @dataclass(frozen=True)
 class CommandResult:
@@ -10,6 +11,7 @@ class CommandResult:
     returncode: int
     stdout: str
     stderr: str
+
 
 @dataclass(frozen=True)
 class ActivityStartResult:
@@ -21,8 +23,10 @@ class ActivityStartResult:
     wait_time_ms: int | None
     output: str
 
+
 class ActivityManagerError(RuntimeError):
     pass
+
 
 def run_command(*args: str) -> CommandResult:
     """Execute ADB without invoking a host shell."""
@@ -43,13 +47,14 @@ def run_command(*args: str) -> CommandResult:
         stderr=completed.stderr,
     )
 
+
 def _adb_shell(
     serial: str,
     *args: str,
 ) -> CommandResult:
     if not serial.strip():
         raise ValueError("serial must not be empty")
-    
+
     return run_command(
         "adb",
         "-s",
@@ -57,6 +62,7 @@ def _adb_shell(
         "shell",
         *args,
     )
+
 
 def _require_success(result: CommandResult) -> None:
     if result.returncode != 0:
@@ -67,19 +73,16 @@ def _require_success(result: CommandResult) -> None:
             f"stderr={result.stderr}"
         )
 
+
 def validate_package_name(package_name: str) -> None:
     """Basic validaiton for package identifiers."""
 
-    pattern = (
-        r"[A-Za-z_][A-Za-z0-9_]*"
-        r"(?:\.[A-Za-z_][A-Za-z0-0_]*)+"
-    )
+    pattern = r"[A-Za-z_][A-Za-z0-9_]*" r"(?:\.[A-Za-z_][A-Za-z0-0_]*)+"
 
     if not re.fullmatch(pattern, package_name):
-        raise ValueError(
-            f"Invalid package name: {package_name}"
-        )
-    
+        raise ValueError(f"Invalid package name: {package_name}")
+
+
 def make_component(
     package_name: str,
     activity_name: str,
@@ -89,23 +92,24 @@ def make_component(
 
     if not activity_name.strip():
         raise ValueError("activity_name must not be empty")
-    
+
     if "/" in activity_name:
         raise ValueError("activity_name must not contain '/'")
-    
+
     if not re.fullmatch(
         r"(?:\.[A-Za-z_][A-Za-z0-0_]*)",
         activity_name,
     ):
         raise ValueError("Invalid activity_name")
-    
+
     return f"{package_name}/{activity_name}"
+
 
 def _extract_field(
     output: str,
     field: str,
 ) -> str | None:
-    
+
     match = re.search(
         rf"(?m)^{re.escape(field)}:\s*(.*?)\s*$",
         output,
@@ -113,14 +117,15 @@ def _extract_field(
 
     return match.group(1) if match else None
 
+
 def _parse_optional_int(
     value: str | None,
 ) -> int | None:
 
     if value is None:
         return None
-    
-    try: 
+
+    try:
         return int(value)
     except ValueError:
         return None
@@ -148,11 +153,7 @@ def parse_activity_start_output(
         )
     )
 
-    success = (
-        returncode == 0
-        and status == "ok"
-        and not has_error
-    )
+    success = returncode == 0 and status == "ok" and not has_error
 
     return ActivityStartResult(
         component=component,
@@ -160,9 +161,10 @@ def parse_activity_start_output(
         status=status,
         launch_state=launch_state,
         total_time_ms=total_time,
-        wait_time_ms=wait_time_ms,
+        wait_time_ms=wait_time,
         output=output,
     )
+
 
 def start_activity(
     serial: str,
@@ -182,20 +184,18 @@ def start_activity(
 
     if force_stop_before_start:
         command.append("-S")
-    
-    command.extend([
-        "-W",
-        "-n",
-        component,
-    ])
+
+    command.extend(
+        [
+            "-W",
+            "-n",
+            component,
+        ]
+    )
 
     result = _adb_shell(serial, *command)
 
-    output = "\n".join(
-        part
-        for part in (result.stdout, result.stderr)
-        if part
-    )
+    output = "\n".join(part for part in (result.stdout, result.stderr) if part)
 
     parsed = parse_activity_start_output(
         component,
@@ -205,12 +205,11 @@ def start_activity(
 
     if not parsed.success:
         raise ActivityManagerError(
-            f"Failed to start {component}\n"
-            f"exit_code={result.returncode}\n"
-            f"{output}"
+            f"Failed to start {component}\n" f"exit_code={result.returncode}\n" f"{output}"
         )
-    
+
     return parsed
+
 
 def force_stop_package(
     serial: str,
@@ -229,6 +228,7 @@ def force_stop_package(
 
     _require_success(result)
 
+
 def get_process_ids(
     serial: str,
     package_name: str,
@@ -246,22 +246,19 @@ def get_process_ids(
     if result.returncode != 0:
         if not result.stdout.strip() and not result.stderr.strip():
             return []
-        
-        raise ActivityManagerError(
-            f"pidof failed: {result.stderr or result.stdout}"
-        )
-    
+
+        raise ActivityManagerError(f"pidof failed: {result.stderr or result.stdout}")
+
     output = result.stdout.strip()
 
     if not output:
         return []
-    
+
     try:
         return [int(pid) for pid in output.split()]
     except ValueError as exc:
-        raise ActivityManagerError(
-            f"Invalid pidof output: {output!r}"
-        ) from exc
+        raise ActivityManagerError(f"Invalid pidof output: {output!r}") from exc
+
 
 def is_process_running(
     serial: str,
@@ -269,8 +266,12 @@ def is_process_running(
 ) -> bool:
 
     return bool(
-        get_process_ids(serial, package_name,)
+        get_process_ids(
+            serial,
+            package_name,
+        )
     )
+
 
 def get_activity_dump(serial: str) -> str:
     """Return raw Activity Manager diagnostic output."""

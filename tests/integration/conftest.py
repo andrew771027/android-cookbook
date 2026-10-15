@@ -4,9 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from android_cookbook.adb import list_devices
-from android_cookbook.package_manager import (package_exists, uninstall_package,)
-from android_cookbook.activity_manager import (force_stop_package,)
+from android_cookbook.activity_manager import (
+    force_stop_package,
+)
+from android_cookbook.package_manager import (
+    package_exists,
+    uninstall_package,
+)
 
 TEST_PACKAGE = "com.example.androidcookbook.fixture"
 
@@ -14,18 +18,16 @@ TEST_PACKAGE = "com.example.androidcookbook.fixture"
 @pytest.fixture(scope="session")
 def android_serial() -> str:
 
-    serial = os.environ.get("ANDOID_SERIAL", "").strip()
+    serial = os.environ.get("ANDROID_SERIAL", "").strip()
 
     if not serial:
         pytest.skip(
-            "Set ANDROID_SERIAL to dedicated emulator."
+            "Set ANDROID_SERIAL to dedicated emulator. exec 'export ANDROID_SERIAL=emulator-5554'"
         )
-    
+
     if not serial.startswith("emulator-"):
-        pytest.skip(
-            "Descructive tests require an emulator serial."
-        )
-    
+        pytest.skip("Descructive tests require an emulator serial.")
+
     result = subprocess.run(
         [
             "adb",
@@ -38,11 +40,9 @@ def android_serial() -> str:
         check=False,
     )
 
-    if result.returncode != 0 result.stdout.strip() != "device":
-        pytest.skip(
-            f"Android emulator {serial} is not ready."
-        )
-    
+    if result.returncode != 0 or result.stdout.strip() != "device":
+        pytest.skip(f"Android emulator {serial} is not ready.")
+
     return serial
 
 
@@ -65,12 +65,12 @@ def clean_test_package(android_serial: str):
     #
     # Setup
     #
-    
+
     if package_exists(android_serial, TEST_PACKAGE):
         pytest.fail(
             "Fixutre package is already installed. "
             "Remove it manually before running destructive tests."
-            f"Run 'adb -s {android_serial} shell pm uninstall {TEST_PACKAGE}'"   #uninstall_package(android_serial, TEST_PACKAGE
+            f"Run 'adb -s {android_serial} shell pm uninstall {TEST_PACKAGE}'"  # uninstall_package(android_serial, TEST_PACKAGE
         )
 
     try:
@@ -88,11 +88,12 @@ def clean_test_package(android_serial: str):
             force_stop_package(android_serial, TEST_PACKAGE)
 
         finally:
- 
+
             if package_exists(android_serial, TEST_PACKAGE):
-                result = uninstall_package(android_serial, TEST_PACKAGE,)
+                result = uninstall_package(
+                    android_serial,
+                    TEST_PACKAGE,
+                )
 
                 if "Success" not in result:
-                    pytest.fail(
-                        f"Fixture cleanup failed: {result}" 
-                    )
+                    pytest.fail(f"Fixture cleanup failed: {result}")

@@ -11,4 +11,4 @@ test_unit:
 	@PYTHONPATH=src poetry run pytest -v ./tests/unit
 
 test_integration:
-	@PYTHONPATH=src poetry run pytest -v ./tests/integration
+	@PYTHONPATH=src poetry run pytest -v -m integration ./tests/integration

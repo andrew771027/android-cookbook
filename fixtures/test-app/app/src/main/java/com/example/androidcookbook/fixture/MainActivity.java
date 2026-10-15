@@ -6,12 +6,12 @@ import android.widget.TextView;
 
 public class MainActivity extends Activity{
 
-    @overrider
+    @Override
     protected void onCreate(Bundle savedInstanceState){
-        super.onCreate(savedInstanceState)
+        super.onCreate(savedInstanceState);
 
         TextView textView = new TextView(this);
-        textView.setText("Android Cookbook Activity Fixture")
+        textView.setText("Android Cookbook Activity Fixture");
         textView.setTextSize(20);
         textView.setPadding(32, 48, 32, 32);
 
