@@ -1,9 +1,18 @@
 import time
+
 import pytest
 
-from android_cookbook.activity_manager import (force_stop_package, get_activity_dump, get_process_ids, is_process_running, start_activity,)
-
-from android_cookbook.package_manager import (install_apk, package_exists,)
+from android_cookbook.activity_manager import (
+    force_stop_package,
+    get_activity_dump,
+    get_process_ids,
+    is_process_running,
+    start_activity,
+)
+from android_cookbook.package_manager import (
+    install_apk,
+    package_exists,
+)
 
 pytestmark = [
     pytest.mark.integration,
@@ -11,6 +20,7 @@ pytestmark = [
 ]
 
 ACTIVITY = ".MainActivity"
+
 
 def wait_for_process_state(
     serial: str,
@@ -32,14 +42,19 @@ def wait_for_process_state(
 
         if running == expected_running:
             return True
-        
+
         if time.monotonic() >= deadline:
             return False
-        
+
         time.sleep(poll_interval)
 
+
 @pytest.fixture
-def installed_fixture(android_serial, test_apk, clean_test_package,):
+def installed_fixture(
+    android_serial,
+    test_apk,
+    clean_test_package,
+):
 
     package_name = clean_test_package
 
@@ -54,7 +69,11 @@ def installed_fixture(android_serial, test_apk, clean_test_package,):
 
     return package_name
 
-def test_start_activity(android_serial, installed_fixture,):
+
+def test_start_activity(
+    android_serial,
+    installed_fixture,
+):
 
     result = start_activity(
         android_serial,
@@ -65,7 +84,11 @@ def test_start_activity(android_serial, installed_fixture,):
     assert result.success
     assert result.status == "ok"
 
-def test_start_activity_creates_process(android_serial, installed_fixture,):
+
+def test_start_activity_creates_process(
+    android_serial,
+    installed_fixture,
+):
 
     start_activity(
         android_serial,
@@ -84,7 +107,11 @@ def test_start_activity_creates_process(android_serial, installed_fixture,):
         installed_fixture,
     )
 
-def test_force_stop_terminates_process(android_serial, installed_fixture,):
+
+def test_force_stop_terminates_process(
+    android_serial,
+    installed_fixture,
+):
 
     start_activity(
         android_serial,
@@ -110,9 +137,16 @@ def test_force_stop_terminates_process(android_serial, installed_fixture,):
     )
 
     # Force-stop does not uninstall the package.
-    assert package_exists(android_serial, installed_fixture,)
+    assert package_exists(
+        android_serial,
+        installed_fixture,
+    )
 
-def test_restart_activity_after_force_stop(android_serial, installed_fixture,):
+
+def test_restart_activity_after_force_stop(
+    android_serial,
+    installed_fixture,
+):
 
     first = start_activity(
         android_serial,
@@ -148,7 +182,11 @@ def test_restart_activity_after_force_stop(android_serial, installed_fixture,):
         expected_running=True,
     )
 
-def test_activity_dump_available(android_serial, installed_fixture,)
+
+def test_activity_dump_available(
+    android_serial,
+    installed_fixture,
+):
 
     start_activity(
         android_serial,

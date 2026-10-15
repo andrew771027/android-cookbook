@@ -18,13 +18,14 @@ SERIAL = "emulator-5554"
 PACKAGE = "com.example.androidcookbook.fixture"
 COMPONENT = f"{PACKAGE}/.MainActivity"
 
+
 def fake_result(
     *args: str,
     stdout: str = "",
     stderr: str = "",
     returncode: int = 0,
 ) -> CommandResult:
-    
+
     return CommandResult(
         args=tuple(args),
         returncode=returncode,
@@ -32,12 +33,17 @@ def fake_result(
         stderr=stderr,
     )
 
+
 def test_make_component():
 
-    assert make_component(
-        PACKAGE,
-        ".MainActivity",
-    ) == COMPONENT
+    assert (
+        make_component(
+            PACKAGE,
+            ".MainActivity",
+        )
+        == COMPONENT
+    )
+
 
 @pytest.mark.parametrize(
     "package",
@@ -50,21 +56,22 @@ def test_make_component():
 )
 def test_invalid_package_name(package):
     with pytest.raises(ValueError):
-        make_component(package, 
-                    ".MainActivity",
-                    )
+        make_component(
+            package,
+            ".MainActivity",
+        )
 
 
 def test_parse_successful_start():
     output = f"""
-    Starting: Intent {{ cmp={COMPONENT} }}
-    Status: ok
-    LaunchState: COLD
-    Activity: {COMPONENT}
-    TotalTime: 352
-    WaitTime: 365
-    Complete
-    """
+Starting: Intent {{ cmp={COMPONENT} }}
+Status: ok
+LaunchState: COLD
+Activity: {COMPONENT}
+TotalTime: 352
+WaitTime: 365
+Complete
+"""
 
     actual = parse_activity_start_output(
         COMPONENT,
@@ -81,6 +88,7 @@ def test_parse_successful_start():
         output=output,
     )
 
+
 def test_parse_start_without_optional_fields():
     output = "Status: ok\nComplete\n"
 
@@ -94,6 +102,7 @@ def test_parse_start_without_optional_fields():
     assert actual.total_time_ms is None
     assert actual.wait_time_ms is None
 
+
 def test_parse_failed_start():
     output = "Error: Activity class does not exist."
 
@@ -105,6 +114,7 @@ def test_parse_failed_start():
 
     assert actual.success is False
 
+
 def test_start_activity_command(monkeypatch):
     captured = []
 
@@ -115,7 +125,7 @@ def test_start_activity_command(monkeypatch):
             *args,
             stdout="Status: ok\nComplete\n",
         )
-    
+
     monkeypatch.setattr(
         am,
         "run_command",
@@ -139,9 +149,10 @@ def test_start_activity_command(monkeypatch):
             "start",
             "-W",
             "-n",
-            COMPONENT
+            COMPONENT,
         )
     ]
+
 
 def test_start_activity_with_force_stop(monkeypatch):
     captured = []
@@ -153,12 +164,8 @@ def test_start_activity_with_force_stop(monkeypatch):
             *args,
             stdout="Status: ok\nComplete\n",
         )
-    
-    monkeypatch.setattr(
-        am,
-        "run_command",
-        fake_run_command
-    )
+
+    monkeypatch.setattr(am, "run_command", fake_run_command)
 
     start_activity(
         SERIAL,
@@ -183,19 +190,23 @@ def test_start_activity_failure(monkeypatch):
             stdout="Error: Activity class does not exist",
             returncode=1,
         )
-    
+
     monkeypatch.setattr(
         am,
         "run_command",
         fake_run_command,
     )
 
-    with pytest.raises(ActivityManagerError, match="Failed to start",):
+    with pytest.raises(
+        ActivityManagerError,
+        match="Failed to start",
+    ):
         start_activity(
             SERIAL,
             PACKAGE,
             ".MissingActivity",
         )
+
 
 def test_force_stop_package(monkeypatch):
     captured = []
@@ -203,7 +214,7 @@ def test_force_stop_package(monkeypatch):
     def fake_run_command(*args):
         captured.append(args)
         return fake_result(*args)
-    
+
     monkeypatch.setattr(
         am,
         "run_command",
@@ -222,13 +233,15 @@ def test_force_stop_package(monkeypatch):
         PACKAGE,
     )
 
+
 def test_force_stop_failure(monkeypatch):
     def fake_run_command(*args):
         return fake_result(
             *args,
             stderr="permission denied",
+            returncode=1,
         )
-    
+
     monkeypatch.setattr(
         am,
         "run_command",
@@ -241,11 +254,8 @@ def test_force_stop_failure(monkeypatch):
 
 def test_get_process_ids(monkeypatch):
     def fake_run_command(*args):
-        return fake_result(
-            *args,
-            stdout="12345 12346\n"
-        )
-    
+        return fake_result(*args, stdout="12345 12346\n")
+
     monkeypatch.setattr(
         am,
         "run_command",
@@ -254,13 +264,14 @@ def test_get_process_ids(monkeypatch):
 
     assert get_process_ids(SERIAL, PACKAGE) == [12345, 12346]
 
+
 def test_get_process_ids_when_absent(monkeypatch):
     def fake_run_command(*args):
         return fake_result(
             *args,
             returncode=1,
         )
-    
+
     monkeypatch.setattr(
         am,
         "run_command",
@@ -277,7 +288,7 @@ def test_pidof_error_is_not_silently_ignored(monkeypatch):
             stderr="device offline",
             returncode=1,
         )
-    
+
     monkeypatch.setattr(
         am,
         "run_command",
@@ -286,6 +297,7 @@ def test_pidof_error_is_not_silently_ignored(monkeypatch):
 
     with pytest.raises(ActivityManagerError):
         get_process_ids(SERIAL, PACKAGE)
+
 
 def test_is_process_running(monkeypatch):
     monkeypatch.setattr(
@@ -296,13 +308,14 @@ def test_is_process_running(monkeypatch):
 
     assert is_process_running(SERIAL, PACKAGE)
 
+
 def test_get_activity_dump(monkeypatch):
     def fake_run_command(*args):
         return fake_result(
             *args,
             stdout="ACTIVITY MANAGER ACTIVITIES\n",
         )
-    
+
     monkeypatch.setattr(
         am,
         "run_command",
