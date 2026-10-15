@@ -12,21 +12,21 @@ inspection, testing, and automation.
 | [v0.3: Android properties](docs/receipes/v0.3-properties.md) | Parse properties and collect device information |
 | [v0.4: Package manager](docs/receipes/v0.4-package-manager.md) | Discover packages, inspect APK paths, and manage test apps |
 | [v0.4.1: Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) | Combine package operations and use fixtures for device setup and cleanup |
-
 | [v0.4.2: Test APK fixture](docs/receipes/v0.4.2-test-apk-fixture.md) | Set up Android build tools, build a disposable APK, and validate it on an emulator |
 
+| [v0.5.0: Activity Manager](docs/receipes/v0.5.0-activity-manager.md) | Launch an Activity, inspect its process, force-stop, restart, and collect diagnostics |
+
 Recipe numbers describe the learning sequence. The package version in `pyproject.toml`
-is currently `0.4.2`.
+is currently `0.5.0`.
 
 ## Planned topics
 
 The following topics are planned. Version assignments remain open after the addition of
-the v0.4.2 test APK fixture recipe.
+the v0.5.0 Activity Manager recipe.
 
 | Topic | Commands and concepts |
 | --- | --- |
 | File system | `/data`, `/sdcard`, and permissions |
-| Activity manager | Start activities and stop apps with `am` |
 | Android services | Inspect service state with `dumpsys` |
 | Logcat | Collect logs and filter by process |
 | System configuration | Read and change settings with `settings` and `svc` |

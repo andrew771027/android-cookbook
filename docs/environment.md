@@ -121,8 +121,23 @@ Follow [Build the test APK](receipes/v0.4.2-test-apk-fixture.md#build-the-test-a
 for installation and SDK configuration, including the macOS Homebrew workaround.
 Use an emulator or device running API 31 or later.
 
-The five fixed-sequence tests run when the APK and an online device are available.
-Their fixtures uninstall the disposable package before and after each test. See the
+The fixed-sequence lifecycle, APK installation, and Activity Manager tests require an
+online dedicated emulator selected with `ANDROID_SERIAL`:
+
+```bash
+export ANDROID_SERIAL=emulator-5554
+PYTHONPATH=src poetry run pytest tests/integration/test_activity_manager.py \
+  tests/integration/test_package_lifecycle.py -m "integration and destructive" -v
+```
+
+Shared fixtures skip for an unset, non-emulator, or unavailable serial. They fail if the
+fixture package is already installed. Remove a leftover manual installation before running:
+
+```bash
+adb -s "$ANDROID_SERIAL" uninstall com.example.androidcookbook.fixture
+```
+
+Teardown attempts force-stop and uninstallation, reporting cleanup failures. See the
 [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for commands and cleanup behavior.
 
 The state machine unit test uses Hypothesis with an in-memory fake (`100` examples,
@@ -141,7 +156,10 @@ PYTHONPATH=src poetry run pytest tests/integration -m "integration and not destr
 
 The `integration` and `destructive` markers are registered in `pytest.ini`. Device checks skip when no device has
 state `device`. Missing ADB or failed commands cause errors.
-Run all tests with `PYTHONPATH=src poetry run pytest` or `make test`.
+`PYTHONPATH=src poetry run pytest` and `make test` exclude destructive tests by default
+through `pytest.ini`. An explicit `-m integration` (also used by `make test_integration`)
+overrides that filter and includes destructive tests. Activity Manager needs no additional
+Python dependencies; see the [v0.5.0 recipe](receipes/v0.5.0-activity-manager.md).
 
 ## Optional development checks
 
