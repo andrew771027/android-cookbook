@@ -1,10 +1,13 @@
 # Architecture
 
 The Python modules build ADB commands, parse their output, and print device reports as JSON.
-All device commands pass through `run_adb()` in `adb.py`, which starts the local ADB client.
+Package, property, and general shell commands pass through `run_adb()` in `adb.py`.
+Activity Manager uses its own `run_command()` to retain exit status, stdout, and stderr.
 
 ```mermaid
 flowchart TD
+    ActivityManager["activity_manager.py"] --> RunCommand["run_command()"]
+    RunCommand --> Subprocess
     DeviceInfo["device_info.main()"] --> Properties["properties.py"]
     PackageLifecycle["run_package_lifecycle()"] --> PackageManager
     PackageInfo["package_info.main()"] --> PackageManager["package_manager.py"]
@@ -28,6 +31,7 @@ The diagram shows property, shell, and package command paths. All three `main()`
 
 | Module | Responsibility |
 | --- | --- |
+| [`activity_manager.py`](../src/android_cookbook/activity_manager.py) | Start activities, force-stop packages, query process IDs, and collect activity diagnostics |
 | [`adb.py`](../src/android_cookbook/adb.py) | Run ADB, list devices, and provide the original property reader |
 | [`shell.py`](../src/android_cookbook/shell.py) | Run commands on a selected device and parse shell output |
 | [`package_manager.py`](../src/android_cookbook/package_manager.py) | Query packages and APK paths; install, uninstall, clear, enable, and disable apps |
@@ -140,6 +144,32 @@ Exceptions pass through, and there is no guaranteed cleanup if a command raises 
 uninstallation. Integration fixtures provide separate setup and teardown around tests.
 See the [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for fields and examples.
 
+### Activity Manager
+
+`activity_manager.py` calls `subprocess.run()` directly through `run_command()` with
+`check=False`, UTF-8 decoding, and replacement of invalid bytes. It uses argument lists
+without a host shell and returns a frozen `CommandResult` with `args`, `returncode`,
+`stdout`, and `stderr`. `_adb_shell()` adds `adb -s <serial> shell` and rejects blank serials.
+
+`start_activity()` builds `am start [-S] -W -n <package>/<activity>` and combines stdout
+and stderr for parsing. Success requires exit code zero, `Status: ok`, and no matching
+error line. It returns a frozen `ActivityStartResult`; missing or non-integer timing
+fields become `None`. Launch failures raise `ActivityManagerError`.
+
+`force_stop_package()` runs `am force-stop` and returns `None`. `get_process_ids()` runs
+`pidof` for the exact process name and returns integer PIDs. A nonzero exit with both
+streams empty returns `[]`; other nonzero exits and non-integer PID output raise
+`ActivityManagerError`. `is_process_running()` converts that list to a Boolean.
+`get_activity_dump()` returns raw stdout from `dumpsys activity activities`.
+Force-stop and dump commands raise `ActivityManagerError` on nonzero exit.
+
+Package identifiers are validated before package operations, and `make_component()`
+accepts a single relative activity name such as `.MainActivity`. The current regexes
+use `[A-Za-z0-0_]` for trailing characters in package segments after the first and in
+activity names, so digits 1–9 are rejected there. Fully qualified activity names and
+nested relative names are also rejected. These are implementation limits, not a complete
+Android component-name validator. See the [recipe](receipes/v0.5.0-activity-manager.md).
+
 ### Test APK build flow
 
 The Android project in `fixtures/test-app` supplies the disposable package used by
@@ -191,10 +221,12 @@ the Python helpers accept one explicitly.
 ## Tests
 
 Unit tests replace process or device calls with sample responses. Integration tests run
-ADB against the first online device.
+ADB against an online device; shared destructive fixtures require `ANDROID_SERIAL`.
 
 | Test file | Checks |
 | --- | --- |
+| `tests/unit/test_activity_manager.py` | Component validation, launch parsing and command flags, launch/force-stop errors, PID lookup, and diagnostics |
+| `tests/integration/test_activity_manager.py` | Five destructive tests: launch, process creation, force-stop without uninstall, restart, and non-empty diagnostics |
 | `tests/unit/test_adb.py` | Device parsing, offline state, and property command arguments |
 | `tests/unit/test_shell.py` | Shell arguments, result fields, user, working directory, and root entries |
 | `tests/unit/test_properties.py` | Property parsing, read arguments, output trimming, and collection with an integer SDK |
@@ -208,7 +240,9 @@ ADB against the first online device.
 | `tests/integration/test_shell.py` | Shell user, Linux kernel output, and a `system` root entry |
 | `tests/integration/test_properties.py` | Model, SDK, Android version, property listing, and collected report |
 
-Integration modules use `pytest.mark.integration` and skip if no device is online.
+Integration modules use `pytest.mark.integration`. Read-only tests skip if no device is
+online; shared destructive fixtures skip if `ANDROID_SERIAL` is unset, is not an emulator
+serial, or does not report state `device`.
 Missing ADB or failed commands cause errors.
 
 The suite does not directly test the JSON entry points, SDK conversion failures, or every
@@ -221,11 +255,13 @@ enabled/disabled flag construction, exact-name versus substring matching, or uni
 with `keep_data=True`. The package JSON entry point is also untested.
 
 The five fixed-sequence lifecycle integration tests call package manager helpers directly, rather than the lifecycle
-helper. Their function-scoped fixtures choose the first online device, check that the APK
-file exists, and remove the fixture package before and after each test. The generated APK comes from `fixtures/test-app` through `scripts/build-test-apk.sh`
+helper. Their shared fixtures select an online `emulator-*` serial from `ANDROID_SERIAL` and
+check APK existence once per session. Function-scoped cleanup rejects a pre-existing
+fixture package, then attempts force-stop and uninstallation in nested `finally` blocks.
+Uninstallation is attempted even if force-stop fails; cleanup failures remain visible. The generated APK comes from `fixtures/test-app` through `scripts/build-test-apk.sh`
 and is ignored by Git. Tests skip if the expected APK is missing or no device is online.
-All five carry `integration` and `destructive` markers and run without removing decorators.
-The `destructive` marker alone does not disable a test.
+All five carry `integration` and `destructive` markers. `pytest.ini` excludes destructive
+tests by default; select `-m "integration and destructive"` to run them.
 The lifecycle unit tests do not cover false results or exceptions. See the
 [lifecycle test instructions](receipes/v0.4.1-package-lifecycle.md#5-run-the-tests).
 
