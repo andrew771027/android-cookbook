@@ -1,7 +1,7 @@
 import re
 import subprocess
 import time
-from dataclass import dataclass
+from dataclasses import dataclass
 from typing import Sequence
 
 PACKAGE = "com.example.androidcookbook.fixture"
@@ -47,7 +47,7 @@ def run_adb_command(
         "adb",
         "-s",
         serial,
-        *agrs,
+        *args,
     ]
 
     try:
