@@ -1,4 +1,4 @@
-# Package lifecycle test APK
+# Android Cookbook test APK
 
 This directory receives the APK used by the
 [v0.4.1 package lifecycle tests](../../../docs/receipes/v0.4.1-package-lifecycle.md).
@@ -22,6 +22,12 @@ In v0.5.0, the app exports `.MainActivity` with a launcher intent filter and dis
 “Android Cookbook Activity Fixture”. It requests no application permissions and has no
 network behavior. It also supports the [Activity Manager tests](../../../docs/receipes/v0.5.0-activity-manager.md).
 
+In v0.5.1, each Activity instance logs callbacks with tag `CookbookLifecycle`, marker
+`android-cookbook-v0.5.1`, and a UUID. A foreground Activity handles the Boolean
+`cookbook_finish` extra in `onNewIntent()` and calls `finish()`. See the
+[Activity lifecycle recipe](../../../docs/receipes/v0.5.1-activity-lifecycle.md).
+Rebuild with `./scripts/build-test-apk.sh` after source changes so tests install the updated APK.
+
 ## Run the device tests
 
 Start the Android Environment emulator and confirm it appears in `adb devices -l`.
@@ -32,11 +38,14 @@ export ANDROID_SERIAL=emulator-5554
 PYTHONPATH=src poetry run pytest \
   tests/integration/test_package_lifecycle.py \
   tests/integration/test_package_lifecycle_state_machine.py \
-  tests/integration/test_activity_manager.py -m "integration and destructive" -v
+  tests/integration/test_activity_manager.py \
+  tests/integration/test_activity_lifecycle.py -m "integration and destructive" -v
 ```
 
 The tests install, inspect, clear, and uninstall the app. The state machine also checks
-its enabled and disabled states. Tests use `allow_test_packages=True` to pass ADB's
+its enabled and disabled states. Activity lifecycle tests clear Logcat and verify launch,
+Home, return from Home, and graceful finish. Run them sequentially on a dedicated emulator.
+Tests use `allow_test_packages=True` to pass ADB's
 `-t` option when installing the test APK.
 
 The fixed-sequence fixture skips when the APK is missing; the state machine also skips
@@ -49,3 +58,19 @@ after each test. The state machine removes existing installations before and aft
 example. Default pytest commands exclude these destructive tests. Use a disposable
 emulator because clearing or uninstalling the app deletes its data. Unit tests use a
 simulated Android backend and do not need this APK or a device.
+
+## Before committing
+
+The file-specific command above checks the fixture consumers during development. Before
+committing, rebuild this APK, then run all unit tests and the complete integration suite:
+
+```bash
+PYTHONPATH=src poetry run pytest tests/unit
+PYTHONPATH=src poetry run pytest tests/integration -m integration -v -rs
+```
+
+Follow the [commit checklist](../../../CommitManual.md#run-the-full-integration-suite)
+for emulator setup and removal of existing installations. Only the dedicated emulator
+should be online; run sequentially. Require all tests to pass without skips or
+deselected tests, and verify that cleanup leaves the fixture package absent. Missing
+APK or device prerequisites must be resolved before committing.

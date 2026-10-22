@@ -13,17 +13,17 @@ public class MainActivity extends Activity{
     private static final String TAG = "CookbookLifecycle";
     private static final String MARKER = "android-cookbook-v0.5.1";
 
-    private final String instanceId = UUID.randomUUIP().toString();
+    private final String instanceId = UUID.randomUUID().toString();
 
     private void recordLifecycle(String event){
         Log.i(
             TAG,
-            "maker=" + MARKER
+            "marker=" + MARKER
                     + " instance=" + instanceId
                     + " event=" + event
         );
     }
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
@@ -75,7 +75,7 @@ public class MainActivity extends Activity{
     }
 
     @Override
-    protected void onNewIntent(Intent intenr){
+    protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
 
         if (intent.getBooleanExtra("cookbook_finish", false)){
@@ -84,4 +84,3 @@ public class MainActivity extends Activity{
     }
 
 }
-

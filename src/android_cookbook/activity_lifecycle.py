@@ -9,30 +9,35 @@ ACTIVITY = ".MainActivity"
 LOG_TAG = "CookbookLifecycle"
 MARKER = "android-cookbook-v0.5.1"
 
-EVENT_NAMES = frozenset({
-    "onCreate",
-    "onStart",
-    "onResume",
-    "onPause",
-    "onStop",
-    "onStart",
-    "onRestart",
-    "onDestroy",
-})
-
-EVENT_PARRERN = re.compile(
-    r"\bmarker=android-cookbook-v0\.5\.1"
-    r"\s+instance=(?P<instance>[a-fA-F0-0-]+)"
-    r"\s+event=(?<event>on[A-Za-z+])\b"
+EVENT_NAMES = frozenset(
+    {
+        "onCreate",
+        "onStart",
+        "onResume",
+        "onPause",
+        "onStop",
+        "onStart",
+        "onRestart",
+        "onDestroy",
+    }
 )
+
+EVENT_PATTERN = re.compile(
+    r"\bmarker=android-cookbook-v0\.5\.1"
+    r"\s+instance=(?P<instance>[a-fA-F0-9-]+)"
+    r"\s+event=(?P<event>on[A-Za-z]+)\b"
+)
+
 
 class LifecycleError(RuntimeError):
     pass
+
 
 @dataclass(frozen=True)
 class LifecycleEvent:
     instance_id: str
     name: str
+
 
 def run_adb_command(
     serial: str,
@@ -42,7 +47,7 @@ def run_adb_command(
 
     if not serial.strip():
         raise ValueError("serial must not be empty")
-    
+
     command = [
         "adb",
         "-s",
@@ -56,25 +61,24 @@ def run_adb_command(
             capture_output=True,
             text=True,
             encoding="utf-8",
-            error="replace",
+            errors="replace",
             timeout=timeout,
             check=False,
         )
-    
+
     except subprocess.TimeoutExpired as exc:
-        raise LifecycleError(
-            f"ADB command timed out: {command}"
-        ) from exc
-    
-    if result.retruncode != 0:
+        raise LifecycleError(f"ADB command timed out: {command}") from exc
+
+    if result.returncode != 0:
         raise LifecycleError(
             f"ADB command failed: {command}\n"
             f"exit_code={result.returncode}\n"
             f"stdout={result.stdout}\n"
             f"stderr={result.stderr}"
         )
-    
+
     return result.stdout
+
 
 def clear_logcat(serial: str) -> None:
     """Only use on a dedicated test emulator."""
@@ -84,6 +88,7 @@ def clear_logcat(serial: str) -> None:
         "logcat",
         "-c",
     )
+
 
 def read_lifecycle_logcat(serial: str) -> None:
     """Read current Logcat buffer without clearing it."""
@@ -97,6 +102,7 @@ def read_lifecycle_logcat(serial: str) -> None:
         "*:S",
     )
 
+
 def parse_lifecycle_events(
     output: str,
 ) -> list[LifecycleEvent]:
@@ -107,7 +113,7 @@ def parse_lifecycle_events(
         if LOG_TAG not in line:
             continue
 
-        match = EVENT_PARRERN.search(line)
+        match = EVENT_PATTERN.search(line)
 
         if match is None:
             continue
@@ -126,6 +132,7 @@ def parse_lifecycle_events(
 
     return events
 
+
 def event_names(
     events: Sequence[LifecycleEvent],
     *,
@@ -133,13 +140,9 @@ def event_names(
 ) -> list[str]:
 
     return [
-        event.name
-        for event in events
-        if (
-            instance_id is None
-            or event.instance_id == instance_id
-        )
+        event.name for event in events if (instance_id is None or event.instance_id == instance_id)
     ]
+
 
 def contains_ordered_sequence(
     actual: Sequence[str],
@@ -149,19 +152,17 @@ def contains_ordered_sequence(
 
     iterator = iter(actual)
 
-    return all(
-        any(value == wanted for value in iterator)
-        for wanted in expected
-    )
+    return all(any(value == wanted for value in iterator) for wanted in expected)
 
 
-def wait_for_lifecycle_sequence(serial: str, 
-                                expected: Sequence[str],
-                                *,
-                                instance_id: str | None = None,
-                                timeout_seconds: float = 10.0,
-                                poll_interval: float = 0.2,
-                                ) -> list[LifecycleEvent]:
+def wait_for_lifecycle_sequence(
+    serial: str,
+    expected: Sequence[str],
+    *,
+    instance_id: str | None = None,
+    timeout_seconds: float = 10.0,
+    poll_interval: float = 0.2,
+) -> list[LifecycleEvent]:
 
     if timeout_seconds < 0:
         raise ValueError("timeout_seconds must be >= 0")
@@ -193,22 +194,16 @@ def wait_for_lifecycle_sequence(serial: str,
 
         time.sleep(poll_interval)
 
-def find_created_instance(
-    events: Sequence[LifecycleEvent]
-) -> str:
-    
-    created = [
-        event.instance_id
-        for event in events
-        if event.name == "onCreate"
-    ]
+
+def find_created_instance(events: Sequence[LifecycleEvent]) -> str:
+
+    created = [event.instance_id for event in events if event.name == "onCreate"]
 
     if not created:
-        raise LifecycleError(
-            "No onCreate event was observed"
-        )
+        raise LifecycleError("No onCreate event was observed")
 
     return created[0]
+
 
 def send_keyevent(
     serial: str,
@@ -231,17 +226,26 @@ def send_keyevent(
         keycode,
     )
 
+
 def press_home(serial: str) -> None:
-    send_keyevent(serial, "KEYCODE_HOME",)
+    send_keyevent(
+        serial,
+        "KEYCODE_HOME",
+    )
 
 
 def press_back(serial: str) -> None:
-    send_keyevent(serial, "KEYCODE_BACK",)
+    send_keyevent(
+        serial,
+        "KEYCODE_BACK",
+    )
 
-def request_activity_finish(serial: str, 
-                            package_name: str = PACKAGE,
-                            activity_name: str = ACTIVITY,
-                            ) -> None:
+
+def request_activity_finish(
+    serial: str,
+    package_name: str = PACKAGE,
+    activity_name: str = ACTIVITY,
+) -> None:
     """Ask a foreground singleTop fixture to finish."""
 
     component = f"{package_name}/{activity_name}"

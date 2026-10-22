@@ -1,6 +1,5 @@
 import pytest
 
-from android_cookbook.activity_manager import start_activity
 from android_cookbook.activity_lifecycle import (
     ACTIVITY,
     clear_logcat,
@@ -10,15 +9,17 @@ from android_cookbook.activity_lifecycle import (
     request_activity_finish,
     wait_for_lifecycle_sequence,
 )
+from android_cookbook.activity_manager import start_activity
 from android_cookbook.package_manager import (
     install_apk,
     package_exists,
 )
 
 pytestmark = [
-    pytest.mark.integraiton,
+    pytest.mark.integration,
     pytest.mark.destructive,
 ]
+
 
 @pytest.fixture
 def lifecycle_app(
@@ -45,8 +46,11 @@ def lifecycle_app(
 
     return package_name
 
-def launch_and_observe(serial: str, 
-                       package_name: str,):
+
+def launch_and_observe(
+    serial: str,
+    package_name: str,
+):
 
     result = start_activity(
         serial,
@@ -70,9 +74,10 @@ def launch_and_observe(serial: str,
 
     return instance_id
 
+
 def test_activity_luanch_lifecycle(
-        android_serial,
-        lifecycle_app,
+    android_serial,
+    lifecycle_app,
 ):
 
     instance_id = launch_and_observe(
@@ -83,7 +88,9 @@ def test_activity_luanch_lifecycle(
     events = wait_for_lifecycle_sequence(
         android_serial,
         [
-            "onCreate", "onStart", "onResume",
+            "onCreate",
+            "onStart",
+            "onResume",
         ],
         instance_id=instance_id,
     )
@@ -94,11 +101,15 @@ def test_activity_luanch_lifecycle(
         "onResume",
     ]
 
+
 def test_home_triggers_pause_and_stop(
     android_serial,
     lifecycle_app,
 ):
-    instance_id = launch_and_observe(android_serial, lifecycle_app,)
+    instance_id = launch_and_observe(
+        android_serial,
+        lifecycle_app,
+    )
 
     press_home(android_serial)
 
@@ -119,12 +130,16 @@ def test_home_triggers_pause_and_stop(
         instance_id=instance_id,
     )
 
+
 def test_return_from_home(
     android_serial,
     lifecycle_app,
 ):
-    instance_id = launch_and_observe(android_serial, lifecycle_app,)
-    
+    instance_id = launch_and_observe(
+        android_serial,
+        lifecycle_app,
+    )
+
     press_home(android_serial)
 
     wait_for_lifecycle_sequence(
@@ -145,14 +160,14 @@ def test_return_from_home(
     assert result.success
 
     events = wait_for_lifecycle_sequence(
-            android_serial,
-            [
-                "onRestart",
-                "onStart",
-                "onResume",
-            ],
-            instance_id=instance_id,
-        )
+        android_serial,
+        [
+            "onRestart",
+            "onStart",
+            "onResume",
+        ],
+        instance_id=instance_id,
+    )
 
     names = event_names(
         events,
@@ -162,29 +177,27 @@ def test_return_from_home(
     assert names.count("onCreate") == 1
     assert "onRestart" in names
 
+
 def test_graceful_finish_triggers_destroy(
     android_serial,
     lifecycle_app,
 ):
 
-    instance_id = launch_and_observe(android_serial, 
-                                     lifecycle_app,
-                                     )
+    instance_id = launch_and_observe(
+        android_serial,
+        lifecycle_app,
+    )
 
-    request_activity_finish(android_serial, 
-                            lifecycle_app,
-                            )
-
+    request_activity_finish(
+        android_serial,
+        lifecycle_app,
+    )
 
     events = wait_for_lifecycle_sequence(
-            android_serial,
-            [
-                "onPause",
-                "onStop",
-                "onDestroy"
-            ],
-            instance_id=instance_id,
-        )
+        android_serial,
+        ["onPause", "onStop", "onDestroy"],
+        instance_id=instance_id,
+    )
 
     names = event_names(
         events,

@@ -1,7 +1,7 @@
 import pytest
 
 from android_cookbook import activity_lifecycle as lifecycle
-from android_cookbook.activity_lifecycle import(
+from android_cookbook.activity_lifecycle import (
     LifecycleError,
     LifecycleEvent,
     contains_ordered_sequence,
@@ -16,19 +16,20 @@ INSTANCE_B = "22222222-2222-2222-2222-222222222222"
 
 
 def log_line(instance: str, event: str) -> str:
-    return  (
+    return (
         "10-19 10:00:00.000 1234 1234 I "
         "CookbookLifecycle: "
         "marker=android-cookbook-v0.5.1 "
         f"instance={instance} event={event}"
     )
 
+
 def test_parse_lifecycle_events():
     output = "\n".join(
         [
             log_line(INSTANCE_A, "onCreate"),
             log_line(INSTANCE_A, "onStart"),
-            log_line(INSTANCE_A, "onResume")
+            log_line(INSTANCE_A, "onResume"),
         ]
     )
 
@@ -37,6 +38,7 @@ def test_parse_lifecycle_events():
         LifecycleEvent(INSTANCE_A, "onStart"),
         LifecycleEvent(INSTANCE_A, "onResume"),
     ]
+
 
 def test_parser_ignore_unrelated_logs():
     output = "\n".join(
@@ -47,33 +49,38 @@ def test_parser_ignore_unrelated_logs():
         ]
     )
 
-    assert parse_lifecycle_events(output == [
+    assert parse_lifecycle_events(output) == [
         LifecycleEvent(INSTANCE_A, "onResume"),
-    ])
+    ]
+
 
 def test_parser_ignores_unknown_event():
     output = log_line(INSTANCE_A, "onUnknown")
 
     assert parse_lifecycle_events(output) == []
 
+
 def test_parser_supports_multiple_instances():
-    output = "\n".join([
-        log_line(INSTANCE_A, "onCreate"),
-        log_line(INSTANCE_B, "onCreate"),
-        log_line(INSTANCE_A, "onResume"),
-    ])
+    output = "\n".join(
+        [
+            log_line(INSTANCE_A, "onCreate"),
+            log_line(INSTANCE_B, "onCreate"),
+            log_line(INSTANCE_A, "onResume"),
+        ]
+    )
 
     events = parse_lifecycle_events(output)
 
     assert event_names(
         events,
-        instance_id=INSTANCE_A,   
+        instance_id=INSTANCE_A,
     ) == [
         "onCreate",
         "onResume",
     ]
 
-@pytest.mark.parameterize(
+
+@pytest.mark.parametrize(
     ("actual", "expected", "result"),
     [
         (
@@ -114,10 +121,14 @@ def test_contains_ordered_swquence(
     result,
 ):
 
-    assert contains_ordered_sequence(
-        actual,
-        expected,
-    ) is result
+    assert (
+        contains_ordered_sequence(
+            actual,
+            expected,
+        )
+        is result
+    )
+
 
 def test_find_created_instance():
     events = [
@@ -127,22 +138,25 @@ def test_find_created_instance():
 
     assert find_created_instance(events) == INSTANCE_A
 
+
 def test_find_created_instance_missing():
-    with pytest.raises(
-        LifecycleError,
-        match="No onCreate"
-    ):
+    with pytest.raises(LifecycleError, match="No onCreate"):
         find_created_instance([])
 
+
 def test_wait_for_lifecycle_sequence(monkeypatch):
-    outputs = iter([
-        log_line(INSTANCE_A, "onCreate"),
-        "\n".join([
+    outputs = iter(
+        [
             log_line(INSTANCE_A, "onCreate"),
-            log_line(INSTANCE_A, "onStart"),
-            log_line(INSTANCE_A, "onResume"),
-        ]),
-    ])
+            "\n".join(
+                [
+                    log_line(INSTANCE_A, "onCreate"),
+                    log_line(INSTANCE_A, "onStart"),
+                    log_line(INSTANCE_A, "onResume"),
+                ]
+            ),
+        ]
+    )
 
     monkeypatch.setattr(
         lifecycle,
@@ -171,25 +185,29 @@ def test_wait_for_lifecycle_sequence(monkeypatch):
         "onResume",
     ]
 
+
 def test_wait_for_lifecycle_timeout(monkeypatch):
     monkeypatch.setattr(
         lifecycle,
         "read_lifecycle_logcat",
-        lambda serial: log_line(INSTANCE_A, "onCreate",),
+        lambda serial: log_line(
+            INSTANCE_A,
+            "onCreate",
+        ),
     )
 
-    with pytest.raises(LifecycleError, match="not observed",):
+    with pytest.raises(
+        LifecycleError,
+        match="not observed",
+    ):
         wait_for_lifecycle_sequence(
             "emulator-5554",
-            [
-                "onCreate",
-                "onStart",
-                "onResume"
-            ],
+            ["onCreate", "onStart", "onResume"],
             timeout_seconds=0,
         )
 
-@pytest.mark.parameterize(
+
+@pytest.mark.parametrize(
     "keycode",
     [
         "KEYCODE_HOME",
@@ -226,6 +244,7 @@ def test_send_keyevent(monkeypatch, keycode):
         )
     ]
 
+
 def test_invalid_keyevent():
     with pytest.raises(ValueError):
         lifecycle.send_keyevent(
@@ -252,21 +271,19 @@ def test_request_activity_finish(monkeypatch):
     )
 
     assert calls == [
-        "emulator-5554",
         (
-            "shell",
-            "am",
-            "start",
-            "-W",
-            "--activity-single-top",
-            "-n",
+            "emulator-5554",
             (
-                "com.example.androidcookbook.fixture/"
-                ".MainActivity"
+                "shell",
+                "am",
+                "start",
+                "-W",
+                "--activity-single-top",
+                "-n",
+                ("com.example.androidcookbook.fixture/" ".MainActivity"),
+                "--ez",
+                "cookbook_finish",
+                "true",
             ),
-            "--ez",
-            "cookbook_finish",
-            "true",
         ),
     ]
-
