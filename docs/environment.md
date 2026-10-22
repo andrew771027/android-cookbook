@@ -108,7 +108,7 @@ PYTHONPATH=src poetry run pytest tests/unit/test_shell.py -v
 Integration tests invoke local ADB and need an online device:
 
 ```bash
-PYTHONPATH=src poetry run pytest tests/integration -m integration
+PYTHONPATH=src poetry run pytest tests/integration -m "integration and not destructive"
 PYTHONPATH=src poetry run pytest tests/integration/test_shell.py -m integration -v
 ```
 
@@ -121,13 +121,14 @@ Follow [Build the test APK](receipes/v0.4.2-test-apk-fixture.md#build-the-test-a
 for installation and SDK configuration, including the macOS Homebrew workaround.
 Use an emulator or device running API 31 or later.
 
-The fixed-sequence lifecycle, APK installation, and Activity Manager tests require an
+The fixed-sequence package lifecycle, APK installation, Activity Manager, and Activity lifecycle tests require an
 online dedicated emulator selected with `ANDROID_SERIAL`:
 
 ```bash
 export ANDROID_SERIAL=emulator-5554
 PYTHONPATH=src poetry run pytest tests/integration/test_activity_manager.py \
-  tests/integration/test_package_lifecycle.py -m "integration and destructive" -v
+  tests/integration/test_package_lifecycle.py \
+  tests/integration/test_activity_lifecycle.py -m "integration and destructive" -v
 ```
 
 Shared fixtures skip for an unset, non-emulator, or unavailable serial. They fail if the
@@ -136,6 +137,13 @@ fixture package is already installed. Remove a leftover manual installation befo
 ```bash
 adb -s "$ANDROID_SERIAL" uninstall com.example.androidcookbook.fixture
 ```
+
+Activity lifecycle tests require the v0.5.1 fixture logs. After changing the Java source,
+run `./scripts/build-test-apk.sh` to refresh the APK that pytest installs; `installDebug`
+alone does not update that artifact. Run lifecycle tests sequentially, with the emulator
+unlocked and no other automation changing the foreground Activity or clearing Logcat.
+These tests clear the shared Logcat buffer during setup. See the
+[Activity lifecycle recipe](receipes/v0.5.1-activity-lifecycle.md) for log format and timeout diagnostics.
 
 Teardown attempts force-stop and uninstallation, reporting cleanup failures. See the
 [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for commands and cleanup behavior.
@@ -160,6 +168,29 @@ state `device`. Missing ADB or failed commands cause errors.
 through `pytest.ini`. An explicit `-m integration` (also used by `make test_integration`)
 overrides that filter and includes destructive tests. Activity Manager needs no additional
 Python dependencies; see the [v0.5.0 recipe](receipes/v0.5.0-activity-manager.md).
+
+## 6. Verify before committing
+
+Before every commit, rebuild the APK and run the complete unit and integration suites.
+Leave only the dedicated test emulator online: some integration tests select the first
+online device rather than `ANDROID_SERIAL`. Keep it unlocked, remove any existing
+fixture installation as described above, and run sequentially without other automation.
+
+```bash
+./scripts/build-test-apk.sh
+export ANDROID_SERIAL=emulator-5554
+adb devices -l
+adb -s "$ANDROID_SERIAL" get-state
+PYTHONPATH=src poetry run pytest tests/unit
+PYTHONPATH=src poetry run pytest tests/integration -m integration -v -rs
+git diff --check
+```
+
+Require all tests to pass with no failures, errors, skips, or deselected tests. A missing
+APK or device that causes skips must be fixed before committing. The default suite,
+read-only runs, and file-specific runs are useful during development but do not replace
+this full verification. Confirm cleanup removes the fixture package. See the
+[commit checklist](../CommitManual.md#run-the-full-integration-suite) for the complete procedure.
 
 ## Optional development checks
 

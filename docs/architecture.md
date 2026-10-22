@@ -3,9 +3,13 @@
 The Python modules build ADB commands, parse their output, and print device reports as JSON.
 Package, property, and general shell commands pass through `run_adb()` in `adb.py`.
 Activity Manager uses its own `run_command()` to retain exit status, stdout, and stderr.
+Activity lifecycle observation uses `run_adb_command()` with a per-command timeout,
+then parses Logcat snapshots and matches ordered callback sequences.
 
 ```mermaid
 flowchart TD
+    ActivityLifecycle["activity_lifecycle.py"] --> LifecycleCommand["run_adb_command()"]
+    LifecycleCommand --> Subprocess
     ActivityManager["activity_manager.py"] --> RunCommand["run_command()"]
     RunCommand --> Subprocess
     DeviceInfo["device_info.main()"] --> Properties["properties.py"]
@@ -31,6 +35,7 @@ The diagram shows property, shell, and package command paths. All three `main()`
 
 | Module | Responsibility |
 | --- | --- |
+| [`activity_lifecycle.py`](../src/android_cookbook/activity_lifecycle.py) | Read and parse fixture lifecycle logs, poll ordered events, send Home/Back, and request graceful finish |
 | [`activity_manager.py`](../src/android_cookbook/activity_manager.py) | Start activities, force-stop packages, query process IDs, and collect activity diagnostics |
 | [`adb.py`](../src/android_cookbook/adb.py) | Run ADB, list devices, and provide the original property reader |
 | [`shell.py`](../src/android_cookbook/shell.py) | Run commands on a selected device and parse shell output |
@@ -170,6 +175,35 @@ activity names, so digits 1–9 are rejected there. Fully qualified activity nam
 nested relative names are also rejected. These are implementation limits, not a complete
 Android component-name validator. See the [recipe](receipes/v0.5.0-activity-manager.md).
 
+### Activity lifecycle observation
+
+`activity_lifecycle.py` runs `adb -s <serial>` directly through `run_adb_command()`.
+It rejects blank serials and uses UTF-8 decoding with replacement, `check=False`, and
+a 20-second command timeout. It returns stdout unchanged. Nonzero exits and subprocess
+timeouts become `LifecycleError`; missing ADB remains `FileNotFoundError`.
+
+The fixture's `MainActivity` logs seven callbacks with tag `CookbookLifecycle`, marker
+`android-cookbook-v0.5.1`, and a UUID per instance. `clear_logcat()` clears the shared
+buffer. `read_lifecycle_logcat()` reads a snapshot with `logcat -d -s CookbookLifecycle:I '*:S'`.
+`parse_lifecycle_events()` accepts matching marker/instance/event fields in that order,
+ignores unrelated lines and unknown callbacks, and returns frozen `LifecycleEvent`
+objects in log order. Instance text accepts hexadecimal characters and hyphens without
+full UUID validation.
+
+`wait_for_lifecycle_sequence()` parses each snapshot afresh and matches an ordered
+subsequence, allowing intervening callbacks. It defaults to a 10-second observation
+timeout and 0.2-second polling interval. An optional instance ID filters matching,
+but the returned events include every parsed instance. Timeout errors report expected
+and actual names. Individual ADB reads can extend elapsed time past the observation
+deadline. Negative observation timeouts and nonpositive intervals raise `ValueError`.
+`find_created_instance()` returns the first creation instance or raises `LifecycleError`.
+
+`send_keyevent()` permits only Home and Back. `request_activity_finish()` starts the
+fixture component with `--activity-single-top --ez cookbook_finish true`. The foreground
+Activity handles this extra in `onNewIntent()` and calls `finish()`. Force-stop does
+not supply an equivalent callback guarantee. These helpers provide no CLI.
+See the [v0.5.1 recipe](receipes/v0.5.1-activity-lifecycle.md) for commands and limitations.
+
 ### Test APK build flow
 
 The Android project in `fixtures/test-app` supplies the disposable package used by
@@ -208,14 +242,17 @@ Errors pass through to the caller:
 | Condition | Exception |
 | --- | --- |
 | ADB executable is missing | `FileNotFoundError` |
-| ADB exits with a non-zero status | `subprocess.CalledProcessError` |
+| General ADB wrapper exits with a non-zero status | `subprocess.CalledProcessError` |
+| Activity lifecycle ADB command times out or exits nonzero | `LifecycleError` |
+| Expected Activity callbacks are not observed | `LifecycleError` |
 | APK path does not exist on the workstation | `FileNotFoundError` |
 | Package filters conflict | `ValueError` |
 | Required `--package` argument is omitted | `argparse` exits with status 2 |
 | SDK output cannot be converted to an integer | `ValueError` |
 | A JSON command finds no online device | `RuntimeError` |
 
-ADB calls have no timeout. The JSON commands have no option for choosing a serial;
+Activity lifecycle calls have a 20-second command timeout and wrap nonzero exits and
+timeouts in `LifecycleError`. Other ADB wrappers have no timeout. The JSON commands have no option for choosing a serial;
 the Python helpers accept one explicitly.
 
 ## Tests
@@ -225,6 +262,8 @@ ADB against an online device; shared destructive fixtures require `ANDROID_SERIA
 
 | Test file | Checks |
 | --- | --- |
+| `tests/unit/test_activity_lifecycle.py` | Log parsing, instance filtering, subsequences, creation lookup, polling and timeout, key events, and finish command construction |
+| `tests/integration/test_activity_lifecycle.py` | Four destructive tests: launch, Home, return from Home, and graceful finish, correlated by instance UUID |
 | `tests/unit/test_activity_manager.py` | Component validation, launch parsing and command flags, launch/force-stop errors, PID lookup, and diagnostics |
 | `tests/integration/test_activity_manager.py` | Five destructive tests: launch, process creation, force-stop without uninstall, restart, and non-empty diagnostics |
 | `tests/unit/test_adb.py` | Device parsing, offline state, and property command arguments |
@@ -244,6 +283,11 @@ Integration modules use `pytest.mark.integration`. Read-only tests skip if no de
 online; shared destructive fixtures skip if `ANDROID_SERIAL` is unset, is not an emulator
 serial, or does not report state `device`.
 Missing ADB or failed commands cause errors.
+
+Activity lifecycle tests share the package setup and cleanup fixtures. They install the
+rebuilt APK, clear Logcat, and observe callbacks sequentially on a dedicated emulator.
+They do not directly unit-test the lifecycle subprocess runner or all argument validation
+branches, and do not integrate-test Back, recreation, or process death.
 
 The suite does not directly test the JSON entry points, SDK conversion failures, or every
 malformed property format. The bulk-property unit test checks parsed output but does not
@@ -275,3 +319,14 @@ its own initialization and `teardown()`. It conditionally calls `pytest.skip()` 
 APK and online device enables it automatically.
 The `100 × 30` and `3 × 5` settings are example/step budgets, not fixed transition counts.
 See the [state machine recipe](receipes/v0.4.1-package-lifecycle.md#6-test-the-package-lifecycle-as-a-state-machine).
+
+## Commit verification
+
+Test skip conditions describe runtime behavior, not a successful commit check. Before
+every commit, rebuild the fixture APK and run the entire unit and integration suites
+on a dedicated emulator. Select integration tests with `-m integration` to override the
+default exclusion of destructive tests. All tests must pass without skips or deselection.
+Run sequentially with only the dedicated emulator online, because device selection
+varies between tests and Activity lifecycle tests clear shared Logcat. Follow the
+[commit checklist](../CommitManual.md#run-the-full-integration-suite) for setup, commands,
+and cleanup checks. Targeted recipe runs do not replace this verification.

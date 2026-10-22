@@ -13,22 +13,22 @@ inspection, testing, and automation.
 | [v0.4: Package manager](docs/receipes/v0.4-package-manager.md) | Discover packages, inspect APK paths, and manage test apps |
 | [v0.4.1: Package lifecycle](docs/receipes/v0.4.1-package-lifecycle.md) | Combine package operations and use fixtures for device setup and cleanup |
 | [v0.4.2: Test APK fixture](docs/receipes/v0.4.2-test-apk-fixture.md) | Set up Android build tools, build a disposable APK, and validate it on an emulator |
-
 | [v0.5.0: Activity Manager](docs/receipes/v0.5.0-activity-manager.md) | Launch an Activity, inspect its process, force-stop, restart, and collect diagnostics |
+| [v0.5.1: Activity lifecycle](docs/receipes/v0.5.1-activity-lifecycle.md) | Observe callbacks through Logcat and verify launch, Home, return, and graceful finish for one Activity instance |
 
 Recipe numbers describe the learning sequence. The package version in `pyproject.toml`
-is currently `0.5.0`.
+is currently `0.5.1`.
 
 ## Planned topics
 
 The following topics are planned. Version assignments remain open after the addition of
-the v0.5.0 Activity Manager recipe.
+the v0.5.1 Activity lifecycle recipe.
 
 | Topic | Commands and concepts |
 | --- | --- |
 | File system | `/data`, `/sdcard`, and permissions |
 | Android services | Inspect service state with `dumpsys` |
-| Logcat | Collect logs and filter by process |
+| Logcat streaming | Extend the v0.5.1 buffer snapshots with streaming and process filters |
 | System configuration | Read and change settings with `settings` and `svc` |
 | File transfer | Copy files with `adb push` and `adb pull` |
 | Fastboot | Understand the bootloader and fastboot commands |
