@@ -23,7 +23,7 @@ EVENT_NAMES = frozenset(
 )
 
 EVENT_PATTERN = re.compile(
-    r"\bmarker=android-cookbook-v0\.5\.1"
+    r"\bmarker=android-cookbook-v0\.5\.2"
     r"\s+instance=(?P<instance>[a-fA-F0-9-]+)"
     r"\s+event=(?P<event>on[A-Za-z]+)\b"
 )
