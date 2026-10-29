@@ -11,9 +11,9 @@ from android_cookbook.activity_recreation import (
     set_user_rotation,
 )
 
-
 INSTANCE_A = "11111111-1111-1111-1111-111111111111"
 INSTANCE_B = "22222222-2222-2222-2222-222222222222"
+
 
 def state_line(
     instance,
@@ -33,53 +33,56 @@ def state_line(
         f"restored={str(restored).lower()}"
     )
 
+
 def test_parse_state_events():
 
-    output = "\n".join([
-        state_line(INSTANCE_A, "saved", 5, "portrait", False),
-        state_line(INSTANCE_B, "created", 5, "landscape", True),
-    ])
+    output = "\n".join(
+        [
+            state_line(INSTANCE_A, "saved", 5, "portrait", False),
+            state_line(INSTANCE_B, "created", 5, "landscape", True),
+        ]
+    )
 
     assert parse_state_events(output) == [
-        state_line(INSTANCE_A, "saved", 5 , "portrait", False),
-        state_line(INSTANCE_B, "created", 5, "landscape", True),
+        StateEvent(INSTANCE_A, "saved", 5, "portrait", False),
+        StateEvent(INSTANCE_B, "created", 5, "landscape", True),
     ]
 
+
 def test_parser_ignores_unrelated_logs():
-    output = "\n".join([
-        "I OtherTag: unrelated",
-        state_line(INSTANCE_A, "created", 0, "portrait", False),
-    ])
+    output = "\n".join(
+        [
+            "I OtherTag: unrelated",
+            state_line(INSTANCE_A, "created", 0, "portrait", False),
+        ]
+    )
 
     assert len(parse_state_events(output)) == 1
 
-def test_state_restoration_success():
-    before = StateEvent(
-        INSTANCE_A, "incremented", 5, "portrait", False
-    )
 
-    after = StateEvent(
-        INSTANCE_B, "created", 5, "landscape", True
-    )
+def test_state_restoration_success():
+    before = StateEvent(INSTANCE_A, "incremented", 5, "portrait", False)
+
+    after = StateEvent(INSTANCE_B, "created", 5, "landscape", True)
 
     assert_state_restored(before, after)
+
 
 @pytest.mark.parametrize(
     "after",
     [
         StateEvent(INSTANCE_A, "created", 5, "landscape", True),
-        StateEvent(INSTANCE_B, "created", 5, "landscape", True),
+        StateEvent(INSTANCE_B, "created", 0, "landscape", True),
         StateEvent(INSTANCE_B, "created", 5, "landscape", False),
         StateEvent(INSTANCE_B, "created", 5, "portrait", True),
     ],
 )
 def test_state_restoration_failures(after):
-    before = StateEvent(
-        INSTANCE_A, "incremented", 5, "portrait", False
-    )
+    before = StateEvent(INSTANCE_A, "incremented", 5, "portrait", False)
 
     with pytest.raises(AssertionError):
         assert_state_restored(before, after)
+
 
 def test_set_user_rotation(monkeypatch):
     calls = []
@@ -96,22 +99,32 @@ def test_set_user_rotation(monkeypatch):
         (
             "emulator-5554",
             (
-                "shell", "settings", "put", "system",
-                "accelerometer_rotation", "0",
+                "shell",
+                "settings",
+                "put",
+                "system",
+                "accelerometer_rotation",
+                "0",
             ),
         ),
         (
             "emulator-5554",
             (
-                "shell", "settings", "put", "system",
-                "user_rotation", "1",
+                "shell",
+                "settings",
+                "put",
+                "system",
+                "user_rotation",
+                "1",
             ),
         ),
     ]
 
+
 def test_invalid_rotation():
     with pytest.raises(ValueError):
         set_user_rotation("emulator-5554", 4)
+
 
 def test_capture_rotation_settings(monkeypatch):
     values = {
@@ -134,17 +147,13 @@ def test_restore_rotation_settings(monkeypatch):
     monkeypatch.setattr(
         ar,
         "put_system_setting",
-        lambda serial, key, value: calls.append(
-            ("put", key, value)
-        ),
+        lambda serial, key, value: calls.append(("put", key, value)),
     )
 
     monkeypatch.setattr(
         ar,
-        "put_system_setting",
-        lambda serial, key: calls.append(
-            ("delete", key)
-        ),
+        "delete_system_setting",
+        lambda serial, key: calls.append(("delete", key)),
     )
 
     restore_rotation_settings(
@@ -157,11 +166,14 @@ def test_restore_rotation_settings(monkeypatch):
         ("put", "accelerometer_rotation", "1"),
     ]
 
+
 def test_wait_for_state_event(monkeypatch):
-    events = iter([
-        [],
-        [StateEvent(INSTANCE_A, "created", 0, "portrait", False)],
-    ])
+    events = iter(
+        [
+            [],
+            [StateEvent(INSTANCE_A, "created", 0, "portrait", False)],
+        ]
+    )
 
     monkeypatch.setattr(
         ar,
@@ -178,6 +190,7 @@ def test_wait_for_state_event(monkeypatch):
 
     assert event.instance_id == INSTANCE_A
 
+
 def test_wait_for_state_event_timeout(monkeypatch):
     monkeypatch.setattr(
         ar,
@@ -191,6 +204,7 @@ def test_wait_for_state_event_timeout(monkeypatch):
             lambda e: e.name == "created",
             timeout_seconds=0,
         )
+
 
 def test_send_fixture_action(monkeypatch):
     calls = []

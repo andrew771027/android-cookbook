@@ -19,7 +19,7 @@ def log_line(instance: str, event: str) -> str:
     return (
         "10-19 10:00:00.000 1234 1234 I "
         "CookbookLifecycle: "
-        "marker=android-cookbook-v0.5.1 "
+        "marker=android-cookbook-v0.5.2 "
         f"instance={instance} event={event}"
     )
 

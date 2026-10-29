@@ -2,9 +2,6 @@ import pytest
 
 from android_cookbook.activity_lifecycle import (
     clear_logcat,
-    event_names,
-    read_lifecycle_logcat,
-    parse_lifecycle_events,
     wait_for_lifecycle_sequence,
 )
 from android_cookbook.activity_manager import start_activity
@@ -27,13 +24,14 @@ pytestmark = [
 PACKAGE = "com.example.androidcookbook.fixture"
 ACTIVITY = ".MainActivity"
 
+
 @pytest.fixture
 def recreation_app(
     android_serial,
     test_apk,
     clean_test_package,
     controlled_rotation,
-)
+):
 
     package_name = clean_test_package
 
@@ -49,6 +47,7 @@ def recreation_app(
     clear_logcat(android_serial)
 
     return package_name
+
 
 def test_rotation_recreates_activity_and_restores_state(
     android_serial,
@@ -68,10 +67,7 @@ def test_rotation_recreates_activity_and_restores_state(
     original = wait_for_state_event(
         android_serial,
         lambda e: (
-            e.name == "created"
-            and e.counter == 0
-            and e.orientation == "portrait"
-            and not e.restored
+            e.name == "created" and e.counter == 0 and e.orientation == "portrait" and not e.restored
         ),
     )
 
@@ -86,20 +82,14 @@ def test_rotation_recreates_activity_and_restores_state(
 
         wait_for_state_event(
             android_serial,
-            lambda e, expected = counter: (
-                e.instance_id == instance_a
-                and e.name == "incremented",
-                and e.counter == expected
+            lambda e, expected=counter: (
+                e.instance_id == instance_a and e.name == "incremented" and e.counter == expected
             ),
         )
-    
+
     before = wait_for_state_event(
         android_serial,
-        lambda e: (
-            e.instance_id == instance_a,
-            and e.name == "incremented"
-            and e.counter == 5
-        )
+        lambda e: (e.instance_id == instance_a and e.name == "incremented" and e.counter == 5),
     )
 
     # 3. Rotate to landscape.
@@ -108,11 +98,7 @@ def test_rotation_recreates_activity_and_restores_state(
     # 4. Observe state saving on the old instance.
     saved = wait_for_state_event(
         android_serial,
-        lambda e: (
-            e.instance_id == instance_a
-            and e.name == "saved"
-            and e.counter == 5
-        ),
+        lambda e: (e.instance_id == instance_a and e.name == "saved" and e.counter == 5),
     )
 
     assert saved.counter == 5
@@ -120,10 +106,7 @@ def test_rotation_recreates_activity_and_restores_state(
     # 5. Validate restoration
     after = wait_for_state_event(
         android_serial,
-        lambda e: (
-            e.instance_id != instance_a
-            and e.orientation == "landscape"
-        ),
+        lambda e: (e.instance_id != instance_a and e.orientation == "landscape"),
     )
 
     # 6. Validate resotration
@@ -170,10 +153,7 @@ def test_rotation_does_not_uninstall_package(
 
     original = wait_for_state_event(
         android_serial,
-        lambda e: (
-            e.name == "created",
-            and e.orientation == "portrait"
-        ),
+        lambda e: (e.name == "created" and e.orientation == "portrait"),
     )
 
     set_user_rotation(android_serial, 1)
