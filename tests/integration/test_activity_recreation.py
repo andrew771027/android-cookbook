@@ -67,7 +67,10 @@ def test_rotation_recreates_activity_and_restores_state(
     original = wait_for_state_event(
         android_serial,
         lambda e: (
-            e.name == "created" and e.counter == 0 and e.orientation == "portrait" and not e.restored
+            e.name == "created"
+            and e.counter == 0
+            and e.orientation == "portrait"
+            and not e.restored
         ),
     )
 
