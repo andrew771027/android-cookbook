@@ -7,7 +7,7 @@ from typing import Sequence
 PACKAGE = "com.example.androidcookbook.fixture"
 ACTIVITY = ".MainActivity"
 LOG_TAG = "CookbookLifecycle"
-MARKER = "android-cookbook-v0.5.1"
+MARKER = "android-cookbook-v0.5.2"
 
 EVENT_NAMES = frozenset(
     {
@@ -23,7 +23,7 @@ EVENT_NAMES = frozenset(
 )
 
 EVENT_PATTERN = re.compile(
-    r"\bmarker=android-cookbook-v0\.5\.2"
+    rf"\bmarker={re.escape(MARKER)}"
     r"\s+instance=(?P<instance>[a-fA-F0-9-]+)"
     r"\s+event=(?P<event>on[A-Za-z]+)\b"
 )

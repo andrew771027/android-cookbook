@@ -14,7 +14,7 @@ public class MainActivity extends Activity{
     private static final String LIFECYCLE_TAG = "CookbookLifecycle";
     private static final String STATE_TAG = "CookbookState";
 
-    private static final String LIFECYCLE_MARKER = "android-cookbook-v0.5.1";
+    private static final String LIFECYCLE_MARKER = "android-cookbook-v0.5.2";
     private static final String STATE_MARKER = "android-cookbook-v0.5.2";
 
     private static final String KEY_COUNTER = "counter";
@@ -22,13 +22,14 @@ public class MainActivity extends Activity{
     private final String instanceId = UUID.randomUUID().toString();
 
     private int counter = 0;
-    private TextView = textView;
+
+    private TextView textView;
 
     private String orientationName(){
         int orientation = getResources()
                 .getConfiguration()
                 .orientation;
-        
+
         if (orientation == Configuration.ORIENTATION_LANDSCAPE){
             return "landscape";
         }
@@ -54,9 +55,9 @@ public class MainActivity extends Activity{
         Log.i(
             STATE_TAG,
             "marker=" + STATE_MARKER
-                    + " instance=" + instanceId,
-                    + " event=" + event,
-                    + " counter=" + counter,
+                    + " instance=" + instanceId
+                    + " event=" + event
+                    + " counter=" + counter
                     + " orientation=" + orientationName()
                     + " restored=" + restored
         );
