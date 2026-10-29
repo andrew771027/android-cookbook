@@ -128,7 +128,8 @@ online dedicated emulator selected with `ANDROID_SERIAL`:
 export ANDROID_SERIAL=emulator-5554
 PYTHONPATH=src poetry run pytest tests/integration/test_activity_manager.py \
   tests/integration/test_package_lifecycle.py \
-  tests/integration/test_activity_lifecycle.py -m "integration and destructive" -v
+  tests/integration/test_activity_lifecycle.py \
+  tests/integration/test_activity_recreation.py -m "integration and destructive" -v
 ```
 
 Shared fixtures skip for an unset, non-emulator, or unavailable serial. They fail if the
@@ -138,12 +139,16 @@ fixture package is already installed. Remove a leftover manual installation befo
 adb -s "$ANDROID_SERIAL" uninstall com.example.androidcookbook.fixture
 ```
 
-Activity lifecycle tests require the v0.5.1 fixture logs. After changing the Java source,
+Activity lifecycle tests require the current v0.5.2 fixture logs. After changing the Java source,
 run `./scripts/build-test-apk.sh` to refresh the APK that pytest installs; `installDebug`
 alone does not update that artifact. Run lifecycle tests sequentially, with the emulator
 unlocked and no other automation changing the foreground Activity or clearing Logcat.
 These tests clear the shared Logcat buffer during setup. See the
 [Activity lifecycle recipe](receipes/v0.5.1-activity-lifecycle.md) for log format and timeout diagnostics.
+
+Activity recreation tests also need an emulator where rotation 0 produces portrait and
+rotation 1 produces landscape. They capture both system rotation settings and attempt
+to restore them during teardown. See [Activity recreation](receipes/v0.5.2-activity-recreation.md).
 
 Teardown attempts force-stop and uninstallation, reporting cleanup failures. See the
 [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for commands and cleanup behavior.
