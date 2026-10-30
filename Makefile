@@ -39,8 +39,8 @@ test_unit:
 	@PYTHONPATH=src poetry run pytest -v ./tests/unit
 
 test_integration:
-	@PYTHONPATH=src poetry run pytest -v -m integration ./tests/integration
+	@PYTHONPATH=src poetry run pytest -v -m 'integration and destructive' ./tests/integration
 
 
 test_all_integration:
-	@PYTHONPATH=src poetry run pytest -v -m 'integration and destructive' ./tests/integration
+	@PYTHONPATH=src poetry run pytest -v -m integration ./tests/integration

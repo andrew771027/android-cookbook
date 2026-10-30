@@ -14,7 +14,7 @@ public class MainActivity extends Activity{
     private static final String LIFECYCLE_TAG = "CookbookLifecycle";
     private static final String STATE_TAG = "CookbookState";
 
-    private static final String LIFECYCLE_MARKER = "android-cookbook-v0.5.2";
+    private static final String LIFECYCLE_MARKER = "android-cookbook-v0.5.1";
     private static final String STATE_MARKER = "android-cookbook-v0.5.2";
 
     private static final String KEY_COUNTER = "counter";

@@ -170,7 +170,7 @@ PYTHONPATH=src poetry run pytest tests/integration -m "integration and not destr
 The `integration` and `destructive` markers are registered in `pytest.ini`. Device checks skip when no device has
 state `device`. Missing ADB or failed commands cause errors.
 `PYTHONPATH=src poetry run pytest` and `make test` exclude destructive tests by default
-through `pytest.ini`. An explicit `-m integration` (also used by `make test_integration`)
+through `pytest.ini`. An explicit `-m integration` (also used by `make test_all_integration`)
 overrides that filter and includes destructive tests. Activity Manager needs no additional
 Python dependencies; see the [v0.5.0 recipe](receipes/v0.5.0-activity-manager.md).
 

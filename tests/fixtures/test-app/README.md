@@ -23,12 +23,13 @@ In v0.5.0, the app exports `.MainActivity` with a launcher intent filter and dis
 network behavior. It also supports the [Activity Manager tests](../../../docs/receipes/v0.5.0-activity-manager.md).
 
 In v0.5.1, each Activity instance logs callbacks with tag `CookbookLifecycle`, marker
-`android-cookbook-v0.5.2`, and a UUID. A foreground Activity handles the Boolean
+`android-cookbook-v0.5.1`, and a UUID. A foreground Activity handles the Boolean
 `cookbook_finish` extra in `onNewIntent()` and calls `finish()`. See the
 [Activity lifecycle recipe](../../../docs/receipes/v0.5.1-activity-lifecycle.md).
 The current v0.5.2 fixture displays a counter and orientation, saves the counter in a
 Bundle, and logs `created`, `resumed`, `saved`, `incremented`, and `reported` state events
-with tag `CookbookState`. Both tags use marker `android-cookbook-v0.5.2`. The foreground
+with tag `CookbookState` and marker `android-cookbook-v0.5.2`. Lifecycle logs retain
+the v0.5.1 marker; both tags share the instance UUID. The foreground
 Activity accepts `cookbook_action=increment` or `report`. See
 [Activity recreation](../../../docs/receipes/v0.5.2-activity-recreation.md). Rotation tests
 change system settings and attempt to restore the captured values during teardown.

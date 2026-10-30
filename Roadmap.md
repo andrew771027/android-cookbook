@@ -15,7 +15,6 @@ inspection, testing, and automation.
 | [v0.4.2: Test APK fixture](docs/receipes/v0.4.2-test-apk-fixture.md) | Set up Android build tools, build a disposable APK, and validate it on an emulator |
 | [v0.5.0: Activity Manager](docs/receipes/v0.5.0-activity-manager.md) | Launch an Activity, inspect its process, force-stop, restart, and collect diagnostics |
 | [v0.5.1: Activity lifecycle](docs/receipes/v0.5.1-activity-lifecycle.md) | Observe callbacks through Logcat and verify launch, Home, return, and graceful finish for one Activity instance |
-
 | [v0.5.2: Activity recreation](docs/receipes/v0.5.2-activity-recreation.md) | Rotate the emulator, correlate Activity instances, and verify saved counter restoration |
 
 Recipe numbers describe the learning sequence. The package version in `pyproject.toml`

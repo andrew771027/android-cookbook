@@ -185,7 +185,7 @@ a 20-second command timeout. It returns stdout unchanged. Nonzero exits and subp
 timeouts become `LifecycleError`; missing ADB remains `FileNotFoundError`.
 
 The fixture's `MainActivity` logs seven callbacks with tag `CookbookLifecycle`, marker
-`android-cookbook-v0.5.2`, and a UUID per instance. `clear_logcat()` clears the shared
+`android-cookbook-v0.5.1`, and a UUID per instance. `clear_logcat()` clears the shared
 buffer. `read_lifecycle_logcat()` reads a snapshot with `logcat -d -s CookbookLifecycle:I '*:S'`.
 `parse_lifecycle_events()` accepts matching marker/instance/event fields in that order,
 ignores unrelated lines and unknown callbacks, and returns frozen `LifecycleEvent`
@@ -291,6 +291,8 @@ ADB against an online device; shared destructive fixtures require `ANDROID_SERIA
 
 | Test file | Checks |
 | --- | --- |
+| `tests/unit/test_activity_recreation.py` | State parsing, restoration assertions, rotation settings, polling, timeout, and increment action arguments |
+| `tests/integration/test_activity_recreation.py` | Two destructive tests: saved counter restoration with per-instance callbacks, and recreation without uninstalling |
 | `tests/unit/test_activity_lifecycle.py` | Log parsing, instance filtering, subsequences, creation lookup, polling and timeout, key events, and finish command construction |
 | `tests/integration/test_activity_lifecycle.py` | Four destructive tests: launch, Home, return from Home, and graceful finish, correlated by instance UUID |
 | `tests/unit/test_activity_manager.py` | Component validation, launch parsing and command flags, launch/force-stop errors, PID lookup, and diagnostics |

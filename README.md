@@ -87,8 +87,9 @@ Build the disposable APK before running package lifecycle, Activity Manager, Act
 ./scripts/build-test-apk.sh
 ```
 
-The fixed-sequence package lifecycle, Activity Manager, and Activity lifecycle tests use
-the dedicated emulator selected by `ANDROID_SERIAL`. Opt in to these destructive tests explicitly:
+The fixed-sequence package lifecycle, Activity Manager, Activity lifecycle, and Activity
+recreation tests use the dedicated emulator selected by `ANDROID_SERIAL`. Opt in to
+these destructive tests explicitly:
 
 ```bash
 export ANDROID_SERIAL=emulator-5554
@@ -150,10 +151,21 @@ Activity recreation tests also change system rotation settings, restore their ca
 values during teardown, and verify counter restoration in a new Activity instance. See
 [Activity recreation](docs/receipes/v0.5.2-activity-recreation.md).
 
-`make test_unit` runs unit tests. `make test_integration` runs the complete integration
-suite, including destructive tests. Despite its name, `make test_all_integration` selects
-only tests marked both `integration` and `destructive`; it does not satisfy the full
-integration check in Commit Manual.
+The Makefile exports `ANDROID_SERIAL`, defaulting to `emulator-5554`. Override it with
+`make <target> ANDROID_SERIAL=emulator-5556` when using another dedicated emulator.
+
+| Target | Behavior |
+| --- | --- |
+| `make build_apk` | Build and copy the fixture APK |
+| `make init_android_serial` | Print the selected serial |
+| `make cleanup_apk` | Uninstall the fixture if present; leave an absent package alone |
+| `make test_unit` | Run all unit tests |
+| `make test_integration` | Run only tests marked both `integration` and `destructive` |
+| `make test_all_integration` | Run the complete integration suite, including destructive tests |
+| `make test` | Run the default suite, excluding destructive tests |
+
+Use `make test_all_integration` for the integration check in Commit Manual.
+`make test_integration` deselects read-only tests and does not meet that requirement.
 
 ## Find your way around
 
