@@ -11,6 +11,11 @@ from android_cookbook.package_manager import (
     package_exists,
     uninstall_package,
 )
+from android_cookbook.activity_recreation import(
+    capture_rotation_settings,
+    restore_rotation_settings,
+    set_user_rotation,
+)
 
 TEST_PACKAGE = "com.example.androidcookbook.fixture"
 
@@ -97,3 +102,16 @@ def clean_test_package(android_serial: str):
 
                 if "Success" not in result:
                     pytest.fail(f"Fixture cleanup failed: {result}")
+
+@pytest.fixture
+def controlled_rotation(android_serial):
+    original = capture_rotation_settings(android_serial)
+
+    try:
+        set_user_rotation(android_serial, 0)
+        yield
+    finally:
+        restore_rotation_settings(
+            android_serial,
+            original,
+        )

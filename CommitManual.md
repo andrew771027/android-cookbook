@@ -51,7 +51,9 @@ also does not replace the full suite.
 These tests install, clear, enable, disable, force-stop, and uninstall the disposable
 fixture app. Activity lifecycle tests also clear the shared Logcat buffer and change
 the foreground Activity. Keep the emulator unlocked and avoid other automation during
-the run. Confirm teardown leaves the fixture package absent.
+the run. Activity recreation tests also modify `accelerometer_rotation` and
+`user_rotation`; their fixture captures and attempts to restore both settings. Confirm
+the original rotation settings are restored after testing. Confirm teardown leaves the fixture package absent.
 
 ## Documentation
 

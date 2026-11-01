@@ -8,6 +8,7 @@ then parses Logcat snapshots and matches ordered callback sequences.
 
 ```mermaid
 flowchart TD
+    ActivityRecreation["activity_recreation.py"] --> LifecycleCommand
     ActivityLifecycle["activity_lifecycle.py"] --> LifecycleCommand["run_adb_command()"]
     LifecycleCommand --> Subprocess
     ActivityManager["activity_manager.py"] --> RunCommand["run_command()"]
@@ -35,6 +36,7 @@ The diagram shows property, shell, and package command paths. All three `main()`
 
 | Module | Responsibility |
 | --- | --- |
+| [`activity_recreation.py`](../src/android_cookbook/activity_recreation.py) | Parse state snapshots, poll predicates, control and restore rotation settings, and validate restored state |
 | [`activity_lifecycle.py`](../src/android_cookbook/activity_lifecycle.py) | Read and parse fixture lifecycle logs, poll ordered events, send Home/Back, and request graceful finish |
 | [`activity_manager.py`](../src/android_cookbook/activity_manager.py) | Start activities, force-stop packages, query process IDs, and collect activity diagnostics |
 | [`adb.py`](../src/android_cookbook/adb.py) | Run ADB, list devices, and provide the original property reader |
@@ -204,6 +206,33 @@ Activity handles this extra in `onNewIntent()` and calls `finish()`. Force-stop 
 not supply an equivalent callback guarantee. These helpers provide no CLI.
 See the [v0.5.1 recipe](receipes/v0.5.1-activity-lifecycle.md) for commands and limitations.
 
+### Activity recreation
+
+`activity_recreation.py` shares the lifecycle ADB runner and its 20-second timeout.
+`parse_state_events()` returns frozen `StateEvent` objects from `CookbookState` lines
+with marker `android-cookbook-v0.5.2`. Fields must appear in order: instance, event,
+counter, orientation, restored. Counters are nonnegative integers; orientation accepts
+`portrait`, `landscape`, or `undefined`. Event names accept lowercase letters without
+an allowlist. `wait_for_state_event()` returns the first predicate match in a snapshot,
+including older matching events. It defaults to 15 seconds and a 0.2-second interval;
+an individual ADB read can overrun the polling deadline.
+
+`set_user_rotation()` disables automatic rotation before setting a value from 0 to 3.
+`capture_rotation_settings()` records both rotation keys; missing or `null` values become
+`None`. Restoration handles `user_rotation` first, then `accelerometer_rotation`, deleting
+keys that were absent. Restoration is sequential and exceptions propagate.
+`send_fixture_action()` sends `increment` or `report` to the foreground singleTop fixture.
+`assert_state_restored()` requires a different instance, equal counter, `restored=True`,
+and different orientation; it does not verify process identity or event names.
+
+The shared `controlled_rotation` fixture captures settings, requests rotation 0, and
+attempts restoration in `finally`. Two destructive integration tests rotate from portrait
+to landscape: one checks counter 5, saved state and per-instance lifecycle sequences;
+the other checks recreation and continued package installation. These tests do not
+assert PID continuity or read settings back after teardown. Unit tests cover parsing,
+restoration invariants, rotation command construction, capture/restore behavior, polling,
+timeout, and increment command extras. See [Activity recreation](receipes/v0.5.2-activity-recreation.md).
+
 ### Test APK build flow
 
 The Android project in `fixtures/test-app` supplies the disposable package used by
@@ -262,6 +291,8 @@ ADB against an online device; shared destructive fixtures require `ANDROID_SERIA
 
 | Test file | Checks |
 | --- | --- |
+| `tests/unit/test_activity_recreation.py` | State parsing, restoration assertions, rotation settings, polling, timeout, and increment action arguments |
+| `tests/integration/test_activity_recreation.py` | Two destructive tests: saved counter restoration with per-instance callbacks, and recreation without uninstalling |
 | `tests/unit/test_activity_lifecycle.py` | Log parsing, instance filtering, subsequences, creation lookup, polling and timeout, key events, and finish command construction |
 | `tests/integration/test_activity_lifecycle.py` | Four destructive tests: launch, Home, return from Home, and graceful finish, correlated by instance UUID |
 | `tests/unit/test_activity_manager.py` | Component validation, launch parsing and command flags, launch/force-stop errors, PID lookup, and diagnostics |
@@ -287,7 +318,7 @@ Missing ADB or failed commands cause errors.
 Activity lifecycle tests share the package setup and cleanup fixtures. They install the
 rebuilt APK, clear Logcat, and observe callbacks sequentially on a dedicated emulator.
 They do not directly unit-test the lifecycle subprocess runner or all argument validation
-branches, and do not integrate-test Back, recreation, or process death.
+branches, and do not integrate-test Back or process death. Recreation has a separate test module.
 
 The suite does not directly test the JSON entry points, SDK conversion failures, or every
 malformed property format. The bulk-property unit test checks parsed output but does not
