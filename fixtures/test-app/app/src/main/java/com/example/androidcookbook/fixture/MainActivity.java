@@ -6,6 +6,7 @@ import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import android.os.Process;
 
 import java.util.UUID;
 
@@ -60,6 +61,7 @@ public class MainActivity extends Activity{
                     + " counter=" + counter
                     + " orientation=" + orientationName()
                     + " restored=" + restored
+                    + " pid=" + Process.myPid()
         );
     }
 
