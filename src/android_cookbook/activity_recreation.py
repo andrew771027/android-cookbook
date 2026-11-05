@@ -208,13 +208,19 @@ def set_user_rotation(
     serial: str,
     rotation: int,
 ) -> None:
+    """Lock the display through Window Manager, avoiding separate setting updates."""
 
     if rotation not in (0, 1, 2, 3):
         raise ValueError("rotation must be 0, 1, 2, or 3")
 
-    put_system_setting(serial, "accelerometer_rotation", "0")
-
-    put_system_setting(serial, "user_rotation", str(rotation))
+    run_adb_command(
+        serial,
+        "shell",
+        "wm",
+        "user-rotation",
+        "lock",
+        str(rotation),
+    )
 
 
 def send_fixture_action(

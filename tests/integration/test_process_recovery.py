@@ -1,15 +1,37 @@
 import pytest
 
-from android_cookbook.activity_lifecycle import (clear_logcat, press_home,)
-from android_cookbook.activity_manager import (force_stop_package, get_process_ids, start_activity,)
-from android_cookbook.package_manager import (install_apk, package_exists,)
-from android_cookbook.process_recovery import (PACKAGE, ACTIVITY, assert_state_recovered, evaluate_recovery, launch_from_launcher, request_background_process_kill, wait_for_process_state_event,)
-from android_cookbook.activity_recreation import (send_fixture_action,)
+from android_cookbook.activity_lifecycle import (
+    clear_logcat,
+    press_home,
+)
+from android_cookbook.activity_manager import (
+    force_stop_package,
+    get_process_ids,
+    start_activity,
+)
+from android_cookbook.activity_recreation import (
+    send_fixture_action,
+)
+from android_cookbook.package_manager import (
+    install_apk,
+    package_exists,
+)
+from android_cookbook.process_recovery import (
+    ACTIVITY,
+    PACKAGE,
+    assert_state_recovered,
+    evaluate_recovery,
+    launch_from_launcher,
+    request_background_process_kill,
+    wait_for_process_absent,
+    wait_for_process_state_event,
+)
 
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.destructive,
 ]
+
 
 @pytest.fixture
 def recovery_app(
@@ -36,6 +58,7 @@ def recovery_app(
 
     return package_name
 
+
 def prepare_background_app(
     serial: str,
     package_name: str,
@@ -44,22 +67,17 @@ def prepare_background_app(
 ):
 
     # 1. Launch fresh Activity.
-    result = start_activity(
+    force_stop_package(serial, package_name)
+
+    launch_from_launcher(
         serial,
         package_name,
         ACTIVITY,
-        force_stop_before_start=True,
     )
-
-    assert result.success
 
     created = wait_for_process_state_event(
         serial,
-        lambda e: (
-            e.name == "created"
-            and e.counter == 0
-            and not e.restored
-        ),
+        lambda e: (e.name == "created" and e.counter == 0 and not e.restored),
     )
 
     # 2. Modify the Activity state.
@@ -68,27 +86,24 @@ def prepare_background_app(
 
         wait_for_process_state_event(
             serial,
-            lambda e n=expected: (
-                e.instance_id == created.instance_id
-                and e.name == "incremented"
-                and e.counter == n
+            lambda e, n=expected: (
+                e.instance_id == created.instance_id and e.name == "incremented" and e.counter == n
             ),
         )
-    
+
     # 3. Background the Activity.
-    proess_home(serial)
+    press_home(serial)
 
     # 4. Verify saved state exists.
     saved = wait_for_process_state_event(
         serial,
         lambda e: (
-            e.instance_id == created.instance_id
-            and e.name == "saved"
-            and e.counter == counter
+            e.instance_id == created.instance_id and e.name == "saved" and e.counter == counter
         ),
     )
 
     return saved
+
 
 def kill_background_app(
     serial: str,
@@ -107,7 +122,7 @@ def kill_background_app(
             "am kill did not terminate the background process. "
             "Android may still consider the process important."
         )
-    
+
     assert old_pid not in get_process_ids(
         serial,
         PACKAGE,
@@ -142,16 +157,17 @@ def test_background_process_death(
         recovery_app,
     )
 
+
 def test_process_death_state_recovery(
     android_serial,
     recovery_app,
-    counter=5,
 ):
 
     # 1. Prepare Activity with counter=5.
     before = prepare_background_app(
         android_serial,
-        before.pid,
+        recovery_app,
+        counter=5,
     )
 
     # 2. Confirm the original process is gone.
@@ -171,9 +187,7 @@ def test_process_death_state_recovery(
     after = wait_for_process_state_event(
         android_serial,
         lambda e: (
-            e.name == "created"
-            and e.pid != before.pid
-            and e.instance_id != before.instance_id
+            e.name == "created" and e.pid != before.pid and e.instance_id != before.instance_id
         ),
     )
 
@@ -192,6 +206,7 @@ def test_process_death_state_recovery(
         recovery_app,
     )
 
+
 def test_force_stop_does_not_unstall_package(
     android_serial,
     recovery_app,
@@ -204,7 +219,7 @@ def test_force_stop_does_not_unstall_package(
         force_stop_before_start=True,
     )
 
-    assert reuslt.success
+    assert result.success
 
     force_stop_package(
         android_serial,

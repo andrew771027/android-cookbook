@@ -1,10 +1,15 @@
 import re
 import time
 from dataclasses import dataclass
-from typing import Callable, Sequence
+from typing import Callable
 
-from android_cookbook.activity_lifecycle import (LifecycleError, run_adb_command,)
-from android_cookbook.activity_manager import (get_process_ids,)
+from android_cookbook.activity_lifecycle import (
+    LifecycleError,
+    run_adb_command,
+)
+from android_cookbook.activity_manager import (
+    get_process_ids,
+)
 
 PACKAGE = "com.example.androidcookbook.fixture"
 ACTIVITY = ".MainActivity"
@@ -22,6 +27,7 @@ PROCESS_STATE_PATTERN = re.compile(
     r"\s+pid=(?P<pid>\d+)\b"
 )
 
+
 @dataclass(frozen=True)
 class ProcessStateEvent:
     instance_id: str
@@ -30,6 +36,7 @@ class ProcessStateEvent:
     orientation: str
     restored: bool
     pid: int
+
 
 @dataclass(frozen=True)
 class RecoveryResult:
@@ -41,6 +48,7 @@ class RecoveryResult:
     new_counter: int
     restored: bool
 
+
 def parse_process_state_events(
     output: str,
 ) -> list[ProcessStateEvent]:
@@ -49,12 +57,12 @@ def parse_process_state_events(
     for line in output.splitlines():
         if STAGE_TAG not in line:
             continue
-        
+
         match = PROCESS_STATE_PATTERN.search(line)
 
         if match is None:
             continue
-        
+
         events.append(
             ProcessStateEvent(
                 instance_id=match.group("instance"),
@@ -65,22 +73,24 @@ def parse_process_state_events(
                 pid=int(match.group("pid")),
             )
         )
-    
+
     return events
+
 
 def read_process_state_events(
     serial: str,
 ) -> list[ProcessStateEvent]:
     output = run_adb_command(
         serial,
-        "locat",
+        "logcat",
         "-d",
         "-s",
-        f"{serial}:I",
+        f"{STAGE_TAG}:I",
         "*:S",
     )
 
     return parse_process_state_events(output)
+
 
 def wait_until(
     predicate: Callable[[], bool],
@@ -91,19 +101,19 @@ def wait_until(
 
     if timeout_seconds < 0:
         raise ValueError("timeout_seconds must be >= 0")
-    
+
     if poll_interval <= 0:
         raise ValueError("poll_interval must be > 0")
-    
+
     deadline = time.monotonic() + timeout_seconds
-    
+
     while True:
         if predicate():
             return True
-        
+
         if time.monotonic() >= deadline:
             return False
-        
+
         time.sleep(poll_interval)
 
 
@@ -111,7 +121,7 @@ def wait_for_process_absent(
     serial: str,
     package_name: str = PACKAGE,
     *,
-    timeout_seconds: float = 10.0
+    timeout_seconds: float = 10.0,
 ) -> bool:
 
     return wait_until(
@@ -119,8 +129,9 @@ def wait_for_process_absent(
             serial,
             package_name,
         ),
-        timeout_seconds=timeout_seconds
+        timeout_seconds=timeout_seconds,
     )
+
 
 def wait_for_new_process(
     serial: str,
@@ -128,7 +139,7 @@ def wait_for_new_process(
     package_name: str = PACKAGE,
     *,
     timeout_seconds: float = 10.0,
-) -> int
+) -> int:
 
     new_pid: int | None = None
 
@@ -142,21 +153,20 @@ def wait_for_new_process(
         if candidates:
 
             new_pid = candidates[0]
-            
+
             return True
-        
+
         return False
-    
+
     if not wait_until(
         process_changed,
         timeout_seconds=timeout_seconds,
     ):
-        raise LifecycleError(
-            "New application process not observed"
-        )
-    
+        raise LifecycleError("New application process not observed")
+
     assert new_pid is not None
     return new_pid
+
 
 def request_background_process_kill(
     serial: str,
@@ -172,12 +182,13 @@ def request_background_process_kill(
         package_name,
     )
 
+
 def launch_from_launcher(
     serial: str,
     package_name: str = PACKAGE,
     activity_name: str = ACTIVITY,
 ) -> str:
-    """Launch using the app's MAIN/LAUNCHER intent."""
+    """Bring the app's task forward using a launcher-style intent."""
 
     return run_adb_command(
         serial,
@@ -189,9 +200,12 @@ def launch_from_launcher(
         "android.intent.action.MAIN",
         "-c",
         "android.intent.category.LAUNCHER",
+        "-f",
+        "0x10200000",  # NEW_TASK | RESET_TASK_IF_NEEDED
         "-n",
         f"{package_name}/{activity_name}",
     )
+
 
 def wait_for_process_state_event(
     serial: str,
@@ -200,7 +214,7 @@ def wait_for_process_state_event(
     timeout_seconds: float = 15.0,
     poll_interval: float = 0.2,
 ) -> ProcessStateEvent:
-    
+
     matched: ProcessStateEvent | None = None
 
     def event_observed() -> bool:
@@ -209,22 +223,21 @@ def wait_for_process_state_event(
         for event in read_process_state_events(serial):
             if predicate(event):
                 matched = event
-                retrun True
-        
+                return True
+
         return False
-    
+
     if not wait_until(
         event_observed,
         timeout_seconds=timeout_seconds,
         poll_interval=poll_interval,
     ):
 
-        raise LifecycleError(
-            "Timed out waiting for process state event"
-        )
-    
+        raise LifecycleError("Timed out waiting for process state event")
+
     assert matched is not None
     return matched
+
 
 def evaluate_recovery(
     before: ProcessStateEvent,
@@ -232,20 +245,14 @@ def evaluate_recovery(
 ) -> RecoveryResult:
 
     if before.pid == after.pid:
-        raise AssertionError(
-            "Process PID did not change"
-        )
-    
+        raise AssertionError("Process PID did not change")
+
     if before.instance_id == after.instance_id:
-        raise AssertionError(
-            "Activity instance ID did not change"
-        )
-    
+        raise AssertionError("Activity instance ID did not change")
+
     if after.name != "created":
-        raise AssertionError(
-            "Expected a new Activity created event"
-        )
-    
+        raise AssertionError("Expected a new Activity created event")
+
     return RecoveryResult(
         old_pid=before.pid,
         new_pid=after.pid,
@@ -256,17 +263,15 @@ def evaluate_recovery(
         restored=after.restored,
     )
 
+
 def assert_state_recovered(
     result: RecoveryResult,
 ) -> None:
 
     if not result.restored:
-        raise AssertionError(
-            "Activity did not receive savedInstanceState"
-        )
-    
+        raise AssertionError("Activity did not receive savedInstanceState")
+
     if result.old_counter != result.new_counter:
         raise AssertionError(
-            "Counter wasa not restored: "
-            f"{result.old_counter} -> {result.new_counter}"
+            "Counter was not restored: " f"{result.old_counter} -> {result.new_counter}"
         )

@@ -8,7 +8,9 @@ and release checks as applicable.
 - [ ] Review the diff for unintended changes.
 - [ ] Check that tests cover any behavior you changed.
 - [ ] Run `PYTHONPATH=src poetry run pytest tests/unit`.
-- [ ] Rebuild the fixture APK with `./scripts/build-test-apk.sh`.
+- [ ] Rebuild the fixture APK with `./scripts/build-test-apk.sh`. For v0.5.3, confirm
+  `CookbookState` logs include `pid`; an older APK without it cannot satisfy the
+  process recovery parser even though the state marker remains v0.5.2.
 - [ ] Prepare an online dedicated emulator and remove any existing fixture installation.
 - [ ] Run the full integration suite, including destructive tests, using the commands below.
 - [ ] Confirm every unit and integration test passed, with no failures, errors, skips,
@@ -50,10 +52,17 @@ also does not replace the full suite.
 
 These tests install, clear, enable, disable, force-stop, and uninstall the disposable
 fixture app. Activity lifecycle tests also clear the shared Logcat buffer and change
-the foreground Activity. Keep the emulator unlocked and avoid other automation during
+the foreground Activity. Process recovery tests also background the fixture, request
+`am kill`, verify process absence, and relaunch its task to check saved state. A skip
+because Android refused to kill the process is incomplete verification.
+
+Keep the emulator unlocked and avoid other automation during
 the run. Activity recreation tests also modify `accelerometer_rotation` and
 `user_rotation`; their fixture captures and attempts to restore both settings. Confirm
-the original rotation settings are restored after testing. Confirm teardown leaves the fixture package absent.
+the original rotation settings are restored after testing. Rotation tests now apply
+`wm user-rotation lock 0` after Activity launch and wait for the portrait baseline;
+see the [v0.5.3 rotation root cause and solution](docs/receipes/v0.5.2-activity-recreation.md#v053-rotation-fix-root-cause-and-solution).
+Confirm teardown leaves the fixture package absent.
 
 ## Documentation
 

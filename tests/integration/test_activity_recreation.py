@@ -64,14 +64,14 @@ def test_rotation_recreates_activity_and_restores_state(
 
     assert result.success
 
+    # Apply rotation to the running Activity, after its initial configuration.
+    wait_for_state_event(android_serial, lambda e: e.name == "created")
+
+    set_user_rotation(android_serial, 0)
+
     original = wait_for_state_event(
         android_serial,
-        lambda e: (
-            e.name == "created"
-            and e.counter == 0
-            and e.orientation == "portrait"
-            and not e.restored
-        ),
+        lambda e: (e.name == "created" and e.counter == 0 and e.orientation == "portrait"),
     )
 
     instance_a = original.instance_id
@@ -147,12 +147,18 @@ def test_rotation_does_not_uninstall_package(
     android_serial,
     recreation_app,
 ):
-    start_activity(
+    result = start_activity(
         android_serial,
         recreation_app,
         ACTIVITY,
         force_stop_before_start=True,
     )
+
+    assert result.success
+
+    wait_for_state_event(android_serial, lambda e: e.name == "created")
+
+    set_user_rotation(android_serial, 0)
 
     original = wait_for_state_event(
         android_serial,

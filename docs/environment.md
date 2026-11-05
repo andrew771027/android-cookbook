@@ -121,15 +121,17 @@ Follow [Build the test APK](receipes/v0.4.2-test-apk-fixture.md#build-the-test-a
 for installation and SDK configuration, including the macOS Homebrew workaround.
 Use an emulator or device running API 31 or later.
 
-The fixed-sequence package lifecycle, APK installation, Activity Manager, and Activity lifecycle tests require an
-online dedicated emulator selected with `ANDROID_SERIAL`:
+The fixed-sequence package lifecycle, APK installation, Activity Manager, Activity
+lifecycle, recreation, and process recovery tests require an online dedicated emulator
+selected with `ANDROID_SERIAL`:
 
 ```bash
 export ANDROID_SERIAL=emulator-5554
 PYTHONPATH=src poetry run pytest tests/integration/test_activity_manager.py \
   tests/integration/test_package_lifecycle.py \
   tests/integration/test_activity_lifecycle.py \
-  tests/integration/test_activity_recreation.py -m "integration and destructive" -v
+  tests/integration/test_activity_recreation.py \
+  tests/integration/test_process_recovery.py -m "integration and destructive" -v
 ```
 
 Shared fixtures skip for an unset, non-emulator, or unavailable serial. They fail if the
@@ -139,7 +141,9 @@ fixture package is already installed. Remove a leftover manual installation befo
 adb -s "$ANDROID_SERIAL" uninstall com.example.androidcookbook.fixture
 ```
 
-Activity lifecycle tests require the current v0.5.2 fixture logs. After changing the Java source,
+Activity tests require the current v0.5.3 fixture APK. Its lifecycle marker remains
+`android-cookbook-v0.5.1`; state logs retain `android-cookbook-v0.5.2` and now include `pid`.
+After changing the Java source,
 run `./scripts/build-test-apk.sh` to refresh the APK that pytest installs; `installDebug`
 alone does not update that artifact. Run lifecycle tests sequentially, with the emulator
 unlocked and no other automation changing the foreground Activity or clearing Logcat.
@@ -148,7 +152,16 @@ These tests clear the shared Logcat buffer during setup. See the
 
 Activity recreation tests also need an emulator where rotation 0 produces portrait and
 rotation 1 produces landscape. They capture both system rotation settings and attempt
-to restore them during teardown. See [Activity recreation](receipes/v0.5.2-activity-recreation.md).
+to restore them during teardown. After launch, tests lock the running Activity to portrait
+with `wm user-rotation lock 0` and wait for its portrait event before modifying state.
+Setting rotation before launch alone did not reliably establish that baseline. See
+[rotation root cause and solution](receipes/v0.5.2-activity-recreation.md#v053-rotation-fix-root-cause-and-solution).
+
+Process recovery tests require state logs ending in `pid=<number>`. A stale APK without
+that field produces events the process parser cannot accept. Rebuild the APK rather than
+increasing the wait timeout. Tests skip if `am kill` does not terminate the background
+process within 10 seconds; such a skip does not satisfy the commit checklist. See
+[Process death and state recovery](receipes/v0.5.3-process-death-recovery.md).
 
 Teardown attempts force-stop and uninstallation, reporting cleanup failures. See the
 [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for commands and cleanup behavior.

@@ -10,9 +10,9 @@ from android_cookbook.process_recovery import (
     wait_for_process_absent,
 )
 
-
 INSTANCE_A = "11111111-1111-1111-1111-111111111111"
 INSTANCE_B = "22222222-2222-2222-2222-222222222222"
+
 
 def make_event(
     instance=INSTANCE_A,
@@ -31,6 +31,7 @@ def make_event(
         restored=restored,
         pid=pid,
     )
+
 
 def log_line(
     instance=INSTANCE_A,
@@ -51,20 +52,24 @@ def log_line(
         f"pid={pid}"
     )
 
+
 def test_parse_process_state_event():
     events = parse_process_state_events(log_line())
 
     assert events == [make_event()]
 
+
 def test_parse_multiple_processes():
-    output = "\n".join([
-        log_line(pid=1234),
-        log_line(
-            instance=INSTANCE_B,
-            pid=5678,
-            restored=True,
-        ),
-    ])
+    output = "\n".join(
+        [
+            log_line(pid=1234),
+            log_line(
+                instance=INSTANCE_B,
+                pid=5678,
+                restored=True,
+            ),
+        ]
+    )
 
     events = parse_process_state_events(output)
 
@@ -75,9 +80,25 @@ def test_parse_multiple_processes():
 
 
 def test_parser_ignores_unrelated_logs():
-    assert parse_process_state_events(
-        "I OtherTag unrelated"
-    ) == []
+    assert parse_process_state_events("I OtherTag unrelated") == []
+
+
+def test_read_process_state_events(monkeypatch):
+    calls = []
+
+    def fake_run_adb_command(serial, *args):
+        calls.append((serial, args))
+        return log_line()
+
+    monkeypatch.setattr(pr, "run_adb_command", fake_run_adb_command)
+
+    assert pr.read_process_state_events("emulator-5554") == [make_event()]
+    assert calls == [
+        (
+            "emulator-5554",
+            ("logcat", "-d", "-s", "CookbookState:I", "*:S"),
+        )
+    ]
 
 
 def test_wait_for_process_absent(monkeypatch):
@@ -94,6 +115,7 @@ def test_wait_for_process_absent(monkeypatch):
         timeout_seconds=1,
     )
 
+
 def test_wait_for_process_absent_timeout(monkeypatch):
     monkeypatch.setattr(
         pr,
@@ -106,11 +128,14 @@ def test_wait_for_process_absent_timeout(monkeypatch):
         timeout_seconds=0,
     )
 
+
 def test_wait_for_new_process(monkeypatch):
-    responses = iter([
-        [],
-        [5678],
-    ])
+    responses = iter(
+        [
+            [],
+            [5678],
+        ]
+    )
 
     monkeypatch.setattr(
         pr,
@@ -118,11 +143,15 @@ def test_wait_for_new_process(monkeypatch):
         lambda serial, package: next(responses),
     )
 
-    assert wait_for_new_process(
-        "emulator-5554",
-        old_pid=1234,
-        timeout_seconds=1,
-    ) == 5678
+    assert (
+        wait_for_new_process(
+            "emulator-5554",
+            old_pid=1234,
+            timeout_seconds=1,
+        )
+        == 5678
+    )
+
 
 def test_evaluate_recovery():
     before = make_event(pid=1234)
@@ -142,6 +171,7 @@ def test_evaluate_recovery():
 
     assert_state_recovered(result)
 
+
 def test_recovery_without_saved_state():
     before = make_event(pid=1234)
 
@@ -154,13 +184,17 @@ def test_recovery_without_saved_state():
 
     result = evaluate_recovery(before, after)
 
-    with pytest.raises(AssertionError, match="savedInstanceState",):
+    with pytest.raises(
+        AssertionError,
+        match="savedInstanceState",
+    ):
         assert_state_recovered(result)
+
 
 def test_recovery_with_wrong_counter():
     before = make_event(pid=1234)
 
-    after make_event(
+    after = make_event(
         instance=INSTANCE_B,
         pid=5678,
         counter=0,
@@ -169,15 +203,29 @@ def test_recovery_with_wrong_counter():
 
     result = evaluate_recovery(before, after)
 
-    with pytest.raises(AssertionError, match="Counter was not restored",):
+    with pytest.raises(
+        AssertionError,
+        match="Counter was not restored",
+    ):
         assert_state_recovered(result)
 
-@pytest.mark.parameterize(
+
+@pytest.mark.parametrize(
     "after",
     [
-        make_event(instance=INSTANCE_B, pid=1234,),
-        make_event(instance=INSTANCE_A, pid=5678,),
-        make_event(instance=INSTANCE_B, pid=5678, event="resumed",),
+        make_event(
+            instance=INSTANCE_B,
+            pid=1234,
+        ),
+        make_event(
+            instance=INSTANCE_A,
+            pid=5678,
+        ),
+        make_event(
+            instance=INSTANCE_B,
+            pid=5678,
+            event="resumed",
+        ),
     ],
 )
 def test_invalid_recovery_identity(after):
@@ -187,16 +235,17 @@ def test_invalid_recovery_identity(after):
             after,
         )
 
+
 def test_request_background_process_kill(monkeypatch):
     calls = []
 
     monkeypatch.setattr(
         pr,
         "run_adb_command",
-        lambda serial, *args: calls.append((serial, args)) or "", 
+        lambda serial, *args: calls.append((serial, args)) or "",
     )
 
-    pr.requset_background_process_kill(
+    pr.request_background_process_kill(
         "emulator-5554",
     )
 
@@ -212,6 +261,7 @@ def test_request_background_process_kill(monkeypatch):
         )
     ]
 
+
 def test_launch_from_launcher(monkeypatch):
     calls = []
 
@@ -226,3 +276,6 @@ def test_launch_from_launcher(monkeypatch):
     assert "Status: ok" in output
     assert "android.intent.action.MAIN" in calls[0][1]
     assert "android.intent.category.LAUNCHER" in calls[0][1]
+
+    args = calls[0][1]
+    assert args[args.index("-f") + 1] == "0x10200000"
