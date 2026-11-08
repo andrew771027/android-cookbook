@@ -18,7 +18,6 @@ def make_event(
     instance=INSTANCE_A,
     event="created",
     counter=5,
-    orientation=False,
     restored=False,
     pid=1234,
 ):
