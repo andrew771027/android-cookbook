@@ -16,14 +16,15 @@ inspection, testing, and automation.
 | [v0.5.0: Activity Manager](docs/receipes/v0.5.0-activity-manager.md) | Launch an Activity, inspect its process, force-stop, restart, and collect diagnostics |
 | [v0.5.1: Activity lifecycle](docs/receipes/v0.5.1-activity-lifecycle.md) | Observe callbacks through Logcat and verify launch, Home, return, and graceful finish for one Activity instance |
 | [v0.5.2: Activity recreation](docs/receipes/v0.5.2-activity-recreation.md) | Rotate the emulator, correlate Activity instances, and verify saved counter restoration |
+| [v0.5.3: Process death and state recovery](docs/receipes/v0.5.3-process-death-recovery.md) | Correlate PID and Activity identity, restore a saved task after background process death, and fix rotation setup |
 
 Recipe numbers describe the learning sequence. The package version in `pyproject.toml`
-is currently `0.5.2`.
+is currently `0.5.3`.
 
 ## Planned topics
 
 The following topics are planned. Version assignments remain open after the addition of
-the v0.5.2 Activity recreation recipe.
+the v0.5.3 process recovery recipe.
 
 | Topic | Commands and concepts |
 | --- | --- |

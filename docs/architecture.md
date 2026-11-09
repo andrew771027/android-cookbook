@@ -8,6 +8,8 @@ then parses Logcat snapshots and matches ordered callback sequences.
 
 ```mermaid
 flowchart TD
+    ProcessRecovery["process_recovery.py"] --> LifecycleCommand
+    ProcessRecovery --> ActivityManager
     ActivityRecreation["activity_recreation.py"] --> LifecycleCommand
     ActivityLifecycle["activity_lifecycle.py"] --> LifecycleCommand["run_adb_command()"]
     LifecycleCommand --> Subprocess
@@ -36,6 +38,7 @@ The diagram shows property, shell, and package command paths. All three `main()`
 
 | Module | Responsibility |
 | --- | --- |
+| [`process_recovery.py`](../src/android_cookbook/process_recovery.py) | Parse PID-aware state events, poll process changes, resume launcher tasks, and validate recovery |
 | [`activity_recreation.py`](../src/android_cookbook/activity_recreation.py) | Parse state snapshots, poll predicates, control and restore rotation settings, and validate restored state |
 | [`activity_lifecycle.py`](../src/android_cookbook/activity_lifecycle.py) | Read and parse fixture lifecycle logs, poll ordered events, send Home/Back, and request graceful finish |
 | [`activity_manager.py`](../src/android_cookbook/activity_manager.py) | Start activities, force-stop packages, query process IDs, and collect activity diagnostics |
@@ -217,7 +220,7 @@ an allowlist. `wait_for_state_event()` returns the first predicate match in a sn
 including older matching events. It defaults to 15 seconds and a 0.2-second interval;
 an individual ADB read can overrun the polling deadline.
 
-`set_user_rotation()` disables automatic rotation before setting a value from 0 to 3.
+`set_user_rotation()` runs `wm user-rotation lock <rotation>` with a value from 0 to 3.
 `capture_rotation_settings()` records both rotation keys; missing or `null` values become
 `None`. Restoration handles `user_rotation` first, then `accelerometer_rotation`, deleting
 keys that were absent. Restoration is sequential and exceptions propagate.
@@ -225,13 +228,48 @@ keys that were absent. Restoration is sequential and exceptions propagate.
 `assert_state_restored()` requires a different instance, equal counter, `restored=True`,
 and different orientation; it does not verify process identity or event names.
 
-The shared `controlled_rotation` fixture captures settings, requests rotation 0, and
-attempts restoration in `finally`. Two destructive integration tests rotate from portrait
-to landscape: one checks counter 5, saved state and per-instance lifecycle sequences;
+The shared `controlled_rotation` fixture captures settings and attempts restoration in
+`finally`. Each test first launches the Activity, observes creation, then requests rotation
+0 and waits for a portrait creation event. This setup may recreate the Activity, so the
+zero-counter baseline permits restored state. Two destructive integration tests rotate
+from that portrait baseline to landscape: one checks counter 5, saved state and
+per-instance lifecycle sequences;
 the other checks recreation and continued package installation. These tests do not
 assert PID continuity or read settings back after teardown. Unit tests cover parsing,
 restoration invariants, rotation command construction, capture/restore behavior, polling,
 timeout, and increment command extras. See [Activity recreation](receipes/v0.5.2-activity-recreation.md).
+
+### Process death and state recovery
+
+`process_recovery.py` uses the lifecycle ADB runner for commands and Logcat, and
+`activity_manager.get_process_ids()` for process observation. The latter uses the
+Activity Manager execution path. `ProcessStateEvent` adds PID to the state fields;
+`RecoveryResult` records before/after PIDs, UUIDs, counters, and the restored flag.
+The parser requires `CookbookState`, the v0.5.2 marker, and ordered fields ending in
+`pid`. `read_process_state_events()` filters on the log tag, not the emulator serial.
+
+`wait_until()` defaults to 10 seconds and a 0.2-second interval. It evaluates once even
+with a zero timeout, returns a Boolean, and validates timeout/interval arguments.
+`wait_for_process_absent()` checks for no PIDs; `wait_for_new_process()` selects the
+first PID different from the old one or raises `LifecycleError`. State-event polling
+defaults to 15 seconds, returns the first snapshot predicate match, and raises
+`LifecycleError` on timeout. Individual ADB operations can exceed polling deadlines.
+
+`request_background_process_kill()` issues `am kill` without verifying termination.
+`launch_from_launcher()` uses MAIN/LAUNCHER and `0x10200000`
+(`NEW_TASK | RESET_TASK_IF_NEEDED`). Integration setup and relaunch use this same
+intent so recovery can resume the saved task. `evaluate_recovery()` checks different
+PIDs and UUIDs and a new `created` event; `assert_state_recovered()` separately checks
+restored state and counter equality.
+
+Three destructive integration tests verify process death without uninstalling, restored
+counter 5 after task relaunch, and force-stop without uninstalling. Preparation force-stops
+before a fresh launch, increments, presses Home, and waits for saved state. Recovery
+has no intervening force-stop. If `am kill` does not remove the process within 10 seconds,
+the tests skip; that is incomplete commit verification. Shared fixtures install the
+rebuilt APK, clear Logcat, then force-stop and uninstall during teardown.
+See [Process recovery](receipes/v0.5.3-process-death-recovery.md) and the
+[rotation root cause and solution](receipes/v0.5.2-activity-recreation.md#v053-rotation-fix-root-cause-and-solution).
 
 ### Test APK build flow
 
@@ -291,6 +329,8 @@ ADB against an online device; shared destructive fixtures require `ANDROID_SERIA
 
 | Test file | Checks |
 | --- | --- |
+| `tests/unit/test_process_recovery.py` | PID-aware parsing, log tag filter, process polling, launcher flags, kill command, and recovery assertion failures |
+| `tests/integration/test_process_recovery.py` | Three destructive tests: background death, saved counter restoration, and force-stop without uninstalling |
 | `tests/unit/test_activity_recreation.py` | State parsing, restoration assertions, rotation settings, polling, timeout, and increment action arguments |
 | `tests/integration/test_activity_recreation.py` | Two destructive tests: saved counter restoration with per-instance callbacks, and recreation without uninstalling |
 | `tests/unit/test_activity_lifecycle.py` | Log parsing, instance filtering, subsequences, creation lookup, polling and timeout, key events, and finish command construction |
@@ -318,7 +358,7 @@ Missing ADB or failed commands cause errors.
 Activity lifecycle tests share the package setup and cleanup fixtures. They install the
 rebuilt APK, clear Logcat, and observe callbacks sequentially on a dedicated emulator.
 They do not directly unit-test the lifecycle subprocess runner or all argument validation
-branches, and do not integrate-test Back or process death. Recreation has a separate test module.
+branches, and do not integrate-test Back. Recreation and process recovery have separate test modules.
 
 The suite does not directly test the JSON entry points, SDK conversion failures, or every
 malformed property format. The bulk-property unit test checks parsed output but does not

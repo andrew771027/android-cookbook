@@ -1,6 +1,6 @@
 [project]
 name = "android-cookbook"
-version = "0.5.2"
+version = "0.5.3"
 description = ""
 authors = [
     {name = "Andrew Wang",email = "andew771027@gmail.com"}
