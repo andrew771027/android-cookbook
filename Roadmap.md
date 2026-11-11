@@ -17,14 +17,15 @@ inspection, testing, and automation.
 | [v0.5.1: Activity lifecycle](docs/receipes/v0.5.1-activity-lifecycle.md) | Observe callbacks through Logcat and verify launch, Home, return, and graceful finish for one Activity instance |
 | [v0.5.2: Activity recreation](docs/receipes/v0.5.2-activity-recreation.md) | Rotate the emulator, correlate Activity instances, and verify saved counter restoration |
 | [v0.5.3: Process death and state recovery](docs/receipes/v0.5.3-process-death-recovery.md) | Correlate PID and Activity identity, restore a saved task after background process death, and fix rotation setup |
+| [v0.5.4: Activity launch diagnostics](docs/receipes/v0.5.4-activity-launch-diagnostics.md) | Compare PID, Activity identity, and lifecycle events for cold, warm, and hot launches; parse optional launch timings |
 
 Recipe numbers describe the learning sequence. The package version in `pyproject.toml`
-is currently `0.5.3`.
+is currently `0.5.4`.
 
 ## Planned topics
 
 The following topics are planned. Version assignments remain open after the addition of
-the v0.5.3 process recovery recipe.
+the v0.5.4 launch diagnostics recipe.
 
 | Topic | Commands and concepts |
 | --- | --- |

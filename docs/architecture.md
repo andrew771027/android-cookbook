@@ -8,6 +8,8 @@ then parses Logcat snapshots and matches ordered callback sequences.
 
 ```mermaid
 flowchart TD
+    LaunchDiagnostics["activity_launch_diagnostics.py"] --> Subprocess
+    LaunchDiagnostics --> LifecycleCommand
     ProcessRecovery["process_recovery.py"] --> LifecycleCommand
     ProcessRecovery --> ActivityManager
     ActivityRecreation["activity_recreation.py"] --> LifecycleCommand
@@ -38,6 +40,7 @@ The diagram shows property, shell, and package command paths. All three `main()`
 
 | Module | Responsibility |
 | --- | --- |
+| [`activity_launch_diagnostics.py`](../src/android_cookbook/activity_launch_diagnostics.py) | Parse optional launch timings and Displayed events, query a single PID, and validate controlled launch observations |
 | [`process_recovery.py`](../src/android_cookbook/process_recovery.py) | Parse PID-aware state events, poll process changes, resume launcher tasks, and validate recovery |
 | [`activity_recreation.py`](../src/android_cookbook/activity_recreation.py) | Parse state snapshots, poll predicates, control and restore rotation settings, and validate restored state |
 | [`activity_lifecycle.py`](../src/android_cookbook/activity_lifecycle.py) | Read and parse fixture lifecycle logs, poll ordered events, send Home/Back, and request graceful finish |
@@ -271,6 +274,36 @@ rebuilt APK, clear Logcat, then force-stop and uninstall during teardown.
 See [Process recovery](receipes/v0.5.3-process-death-recovery.md) and the
 [rotation root cause and solution](receipes/v0.5.2-activity-recreation.md#v053-rotation-fix-root-cause-and-solution).
 
+### Activity launch diagnostics
+
+`activity_launch_diagnostics.py` launches with `adb -s <serial> shell am start -W -n
+<component>` using a 30-second timeout. It does not force-stop during launch.
+`LaunchResult` retains optional status, launch state, component, integer timing fields,
+warning lines, raw stdout, and host monotonic elapsed time. Invalid timing fields, failed
+exits, leading stdout errors, and non-ok status raise `LaunchError`; absent status is
+accepted. Missing ADB remains `FileNotFoundError`.
+
+`get_app_pid()` runs `pidof` separately with a 10-second timeout. Empty output with exit
+code 0 or 1 returns `None`; multiple PIDs, invalid integers, and other nonzero exits raise
+`LaunchError`. PID timeouts remain `subprocess.TimeoutExpired`. Force-stop and graceful
+finish use the lifecycle runner's 20-second timeout.
+
+`LaunchObservation` combines caller-supplied PID, UUID, creation evidence, expected type,
+and result. `assert_launch_type()` validates cold/warm/hot preconditions without using
+platform launch state or timing thresholds. Integration tests gather lifecycle and state
+logs through existing helpers. Displayed parsing accepts supplied text only; integration
+tests do not collect Displayed events or export timing reports.
+
+`wait_until()` invokes its predicate immediately and retries at the configured interval
+(default 0.2 seconds) until success or timeout (default 10 seconds). A zero timeout still
+evaluates once. It validates timeout/interval arguments, returns a Boolean, and propagates
+predicate exceptions. Individual predicate calls can exceed the deadline. Unit tests
+verify retries and timeout behavior with a simulated clock.
+
+Unit tests cover valid cold, warm, and hot classifications, four invalid observations,
+and Displayed durations with and without seconds plus unrelated log lines. See the
+[v0.5.4 recipe](receipes/v0.5.4-activity-launch-diagnostics.md#run-the-tests) for commands.
+
 ### Test APK build flow
 
 The Android project in `fixtures/test-app` supplies the disposable package used by
@@ -319,7 +352,8 @@ Errors pass through to the caller:
 | A JSON command finds no online device | `RuntimeError` |
 
 Activity lifecycle calls have a 20-second command timeout and wrap nonzero exits and
-timeouts in `LifecycleError`. Other ADB wrappers have no timeout. The JSON commands have no option for choosing a serial;
+timeouts in `LifecycleError`. Launch diagnostics have 30-second launch and 10-second
+PID timeouts as described above. Other ADB wrappers have no timeout. The JSON commands have no option for choosing a serial;
 the Python helpers accept one explicitly.
 
 ## Tests
@@ -329,6 +363,8 @@ ADB against an online device; shared destructive fixtures require `ANDROID_SERIA
 
 | Test file | Checks |
 | --- | --- |
+| `tests/unit/test_activity_launch_diagnostics.py` | Timing and Displayed parsing, cold/warm/hot and invalid classifications, launch command and timeout, PID lookup, finish arguments, and polling success/timeout/validation/error propagation |
+| `tests/integration/test_activity_launch_diagnostics.py` | Three destructive cold/warm/hot scenarios, PID and UUID checks, lifecycle sequences, and optional timing collection; warm/hot can skip on lost processes |
 | `tests/unit/test_process_recovery.py` | PID-aware parsing, log tag filter, process polling, launcher flags, kill command, and recovery assertion failures |
 | `tests/integration/test_process_recovery.py` | Three destructive tests: background death, saved counter restoration, and force-stop without uninstalling |
 | `tests/unit/test_activity_recreation.py` | State parsing, restoration assertions, rotation settings, polling, timeout, and increment action arguments |

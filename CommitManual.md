@@ -8,8 +8,8 @@ and release checks as applicable.
 - [ ] Review the diff for unintended changes.
 - [ ] Check that tests cover any behavior you changed.
 - [ ] Run `PYTHONPATH=src poetry run pytest tests/unit`.
-- [ ] Rebuild the fixture APK with `./scripts/build-test-apk.sh`. For v0.5.3, confirm
-  `CookbookState` logs include `pid`; an older APK without it cannot satisfy the
+- [ ] Rebuild the fixture APK with `./scripts/build-test-apk.sh`. For v0.5.4, confirm
+  the fixture version is `0.5.4` (`versionCode=6`) and `CookbookState` logs include `pid`; an older APK without it cannot satisfy the
   process recovery parser even though the state marker remains v0.5.2.
 - [ ] Prepare an online dedicated emulator and remove any existing fixture installation.
 - [ ] Run the full integration suite, including destructive tests, using the commands below.
@@ -55,6 +55,12 @@ fixture app. Activity lifecycle tests also clear the shared Logcat buffer and ch
 the foreground Activity. Process recovery tests also background the fixture, request
 `am kill`, verify process absence, and relaunch its task to check saved state. A skip
 because Android refused to kill the process is incomplete verification.
+
+Launch diagnostics tests also establish cold, warm, and hot scenarios by force-stopping,
+gracefully finishing, or backgrounding the fixture Activity. Warm and hot tests skip if
+the original process does not survive setup. Such skips are incomplete verification.
+Review the [v0.5.4 known limitations](docs/receipes/v0.5.4-activity-launch-diagnostics.md#known-limitations)
+before treating passing tests as complete launch validation.
 
 Keep the emulator unlocked and avoid other automation during
 the run. Activity recreation tests also modify `accelerometer_rotation` and

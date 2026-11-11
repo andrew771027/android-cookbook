@@ -122,8 +122,8 @@ for installation and SDK configuration, including the macOS Homebrew workaround.
 Use an emulator or device running API 31 or later.
 
 The fixed-sequence package lifecycle, APK installation, Activity Manager, Activity
-lifecycle, recreation, and process recovery tests require an online dedicated emulator
-selected with `ANDROID_SERIAL`:
+lifecycle, recreation, process recovery, and launch diagnostics tests require an online
+dedicated emulator selected with `ANDROID_SERIAL`:
 
 ```bash
 export ANDROID_SERIAL=emulator-5554
@@ -131,7 +131,8 @@ PYTHONPATH=src poetry run pytest tests/integration/test_activity_manager.py \
   tests/integration/test_package_lifecycle.py \
   tests/integration/test_activity_lifecycle.py \
   tests/integration/test_activity_recreation.py \
-  tests/integration/test_process_recovery.py -m "integration and destructive" -v
+  tests/integration/test_process_recovery.py \
+  tests/integration/test_activity_launch_diagnostics.py -m "integration and destructive" -v
 ```
 
 Shared fixtures skip for an unset, non-emulator, or unavailable serial. They fail if the
@@ -141,7 +142,7 @@ fixture package is already installed. Remove a leftover manual installation befo
 adb -s "$ANDROID_SERIAL" uninstall com.example.androidcookbook.fixture
 ```
 
-Activity tests require the current v0.5.3 fixture APK. Its lifecycle marker remains
+Activity tests require the current v0.5.4 fixture APK. Its lifecycle marker remains
 `android-cookbook-v0.5.1`; state logs retain `android-cookbook-v0.5.2` and now include `pid`.
 After changing the Java source,
 run `./scripts/build-test-apk.sh` to refresh the APK that pytest installs; `installDebug`
@@ -162,6 +163,13 @@ that field produces events the process parser cannot accept. Rebuild the APK rat
 increasing the wait timeout. Tests skip if `am kill` does not terminate the background
 process within 10 seconds; such a skip does not satisfy the commit checklist. See
 [Process death and state recovery](receipes/v0.5.3-process-death-recovery.md).
+
+Launch diagnostics reuse the lifecycle UUID, state events, graceful finish extra, and
+`report` action. No new log marker is required for v0.5.4. They force-stop for cold
+setup, finish the Activity for warm setup, and press Home for hot setup. Warm and hot
+tests skip if their process-survival preconditions are unavailable; a skip is incomplete
+commit verification. See [Activity launch diagnostics](receipes/v0.5.4-activity-launch-diagnostics.md)
+for commands and current validation limitations.
 
 Teardown attempts force-stop and uninstallation, reporting cleanup failures. See the
 [lifecycle recipe](receipes/v0.4.1-package-lifecycle.md) for commands and cleanup behavior.
