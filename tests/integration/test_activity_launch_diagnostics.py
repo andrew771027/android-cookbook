@@ -1,13 +1,6 @@
 import pytest
 
-from android_cookbook.activity_lifecycle import (
-    clear_logcat,
-    parse_lifecycle_events,
-    press_home,
-    read_lifecycle_logcat,
-    wait_for_lifecycle_sequence,
-)
-from android_cookbook.activity_launch_diagnostics import(
+from android_cookbook.activity_launch_diagnostics import (
     LaunchObservation,
     LaunchType,
     assert_launch_type,
@@ -17,9 +10,16 @@ from android_cookbook.activity_launch_diagnostics import(
     launch_activity,
     wait_until,
 )
+from android_cookbook.activity_lifecycle import (
+    clear_logcat,
+    parse_lifecycle_events,
+    press_home,
+    read_lifecycle_logcat,
+    wait_for_lifecycle_sequence,
+)
 from android_cookbook.activity_recreation import (
-    wait_for_state_event,
     send_fixture_action,
+    wait_for_state_event,
 )
 from android_cookbook.package_manager import (
     install_apk,
@@ -32,6 +32,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.destructive,
 ]
+
 
 @pytest.fixture
 def launch_app(
@@ -59,31 +60,21 @@ def launch_app(
 
     return package_name
 
-def latest_created_instance(serial):
-    events = parse_lifecycle_events(
-        read_lifecycle_logcat(serial)
-    )
 
-    created = [
-        event.instance_id
-        for event in events
-        if event.name == "onCreate"
-    ]
+def latest_created_instance(serial):
+    events = parse_lifecycle_events(read_lifecycle_logcat(serial))
+
+    created = [event.instance_id for event in events if event.name == "onCreate"]
 
     assert created, "No onCreate event observed"
 
     return created[-1]
 
-def lifecycle_names(serial, instance_id):
-    events = parse_lifecycle_events(
-        read_lifecycle_logcat(serial)
-    )
 
-    return [
-        event.name
-        for event in events
-        if event.instance_id == instance_id
-    ]
+def lifecycle_names(serial, instance_id):
+    events = parse_lifecycle_events(read_lifecycle_logcat(serial))
+
+    return [event.name for event in events if event.instance_id == instance_id]
 
 
 def test_cold_start(
@@ -95,9 +86,7 @@ def test_cold_start(
     # no-process cold-start precondition.
     force_stop_app(android_serial)
 
-    assert wait_until(
-        lambda: get_app_pid(android_serial) is None
-    )
+    assert wait_until(lambda: get_app_pid(android_serial) is None)
 
     pid_before = get_app_pid(android_serial)
 
@@ -119,7 +108,7 @@ def test_cold_start(
             "onStart",
             "onResume",
         ],
-        install_apk=created.instance_id,
+        instance_id=created.instance_id,
     )
 
     observation = LaunchObservation(
@@ -128,7 +117,7 @@ def test_cold_start(
         pid_after=pid_after,
         instance_before=None,
         instance_after=created.instance_id,
-        create_after_launch=True,
+        created_after_launch=True,
         result=result,
     )
 
@@ -143,13 +132,14 @@ def test_cold_start(
         f"HostElapsed={result.host_elapsed_ms:.1f}ms"
     )
 
+
 def test_warm_start(
     android_serial,
     launch_app,
 ):
 
     # 1. Launch the first Activity.
-    launch_app(android_serial)
+    launch_activity(android_serial)
 
     first = wait_for_state_event(
         android_serial,
@@ -166,9 +156,7 @@ def test_warm_start(
 
     wait_for_lifecycle_sequence(
         android_serial,
-        [
-            "onDestroy"
-        ],
+        ["onDestroy"],
         instance_id=old_instance,
     )
 
@@ -177,8 +165,7 @@ def test_warm_start(
 
     if pid_before != old_pid:
         pytest.skip(
-            "Process did not survive Activity finish; "
-            "warm-start precondition unavailable"
+            "Process did not survive Activity finish; " "warm-start precondition unavailable"
         )
 
     # 4. Clear only the dedicagted emulator's logs.
@@ -189,10 +176,7 @@ def test_warm_start(
 
     new_instance = wait_for_state_event(
         android_serial,
-        lambda e: (
-            e.name == "created"
-            and e.instance_id != old_instance
-        ),
+        lambda e: (e.name == "created" and e.instance_id != old_instance),
     )
 
     pid_after = get_app_pid(android_serial)
@@ -213,7 +197,7 @@ def test_warm_start(
         pid_after=pid_after,
         instance_before=old_instance,
         instance_after=new_instance.instance_id,
-        create_after_launch=True,
+        created_after_launch=True,
         result=result,
     )
 
@@ -249,20 +233,15 @@ def test_hot_start(
 
     wait_for_lifecycle_sequence(
         android_serial,
-        [
-            "onPause",
-            "onStop"
-        ],
+        ["onPause", "onStop"],
         instance_id=instance_id,
     )
 
     pid_before = get_app_pid(android_serial)
 
     if pid_before != original_pid:
-        pytest.skip(
-            "Process disappeared before hot-start test"
-        )
-    
+        pytest.skip("Process disappeared before hot-start test")
+
     # 3. Isolate the launch observation window.
     clear_logcat(android_serial)
 
@@ -281,14 +260,9 @@ def test_hot_start(
 
     pid_after = get_app_pid(android_serial)
 
-    events = parse_lifecycle_events(
-        read_lifecycle_logcat(android_serial)
-    )
+    events = parse_lifecycle_events(read_lifecycle_logcat(android_serial))
 
-    create_after_launch = any(
-        event.name == "onCreate"
-        for event in events
-    )
+    created_after_launch = any(event.name == "onCreate" for event in events)
 
     observation = LaunchObservation(
         expected_type=LaunchType.HOT,
@@ -296,7 +270,7 @@ def test_hot_start(
         pid_after=pid_after,
         instance_before=instance_id,
         instance_after=instance_id,
-        create_after_launch=create_after_launch,
+        created_after_launch=created_after_launch,
         result=result,
     )
 
