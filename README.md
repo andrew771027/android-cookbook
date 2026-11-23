@@ -142,15 +142,13 @@ adb devices -l
 adb -s "$ANDROID_SERIAL" get-state
 # If the fixture is installed, uninstall it before testing.
 adb -s "$ANDROID_SERIAL" shell pm list packages com.example.androidcookbook.fixture
-PYTHONPATH=src poetry run pytest tests/unit
-PYTHONPATH=src poetry run pytest tests/integration -m integration -v -rs
+make test
 git diff --check
 ```
 
 Both suites must pass completely, with no failures, errors, skipped tests, or deselected
-tests. Resolve missing prerequisites and rerun if any tests skip. Default runs exclude
-destructive tests, and recipe-specific runs cover only part of the suite; neither
-satisfies this requirement. Confirm the fixture package is absent after teardown.
+tests. Resolve missing prerequisites and rerun if any tests skip. Confirm the fixture
+package is absent after teardown.
 
 Activity recreation tests also change system rotation settings, restore their captured
 values during teardown, and verify counter restoration in a new Activity instance. See
@@ -177,10 +175,10 @@ The Makefile exports `ANDROID_SERIAL`, defaulting to `emulator-5554`. Override i
 | `make test_unit` | Run all unit tests |
 | `make test_integration` | Run only tests marked both `integration` and `destructive` |
 | `make test_all_integration` | Run the complete integration suite, including destructive tests |
-| `make test` | Run the default suite, excluding destructive tests |
+| `make test` | Run all unit and integration tests, including destructive tests |
 
-Use `make test_all_integration` for the integration check in Commit Manual.
-`make test_integration` deselects read-only tests and does not meet that requirement.
+`make test` clears the default marker filter in `pytest.ini` with `-m ""` and reports skip reasons.
+Build the fixture APK and prepare a dedicated emulator before running it.
 
 ## Find your way around
 

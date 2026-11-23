@@ -33,7 +33,7 @@ flowchart TD
 ```
 
 
-The diagram shows property, shell, and package command paths. All three `main()` functions also call
+The diagram shows the ADB execution paths for reports and Activity helpers. All three `main()` functions also call
 `adb.list_devices()` to choose the first device whose state is `device`.
 
 ## Modules
@@ -216,8 +216,8 @@ See the [v0.5.1 recipe](receipes/v0.5.1-activity-lifecycle.md) for commands and 
 
 `activity_recreation.py` shares the lifecycle ADB runner and its 20-second timeout.
 `parse_state_events()` returns frozen `StateEvent` objects from `CookbookState` lines
-with marker `android-cookbook-v0.5.2`. Fields must appear in order: instance, event,
-counter, orientation, restored. Counters are nonnegative integers; orientation accepts
+with marker `android-cookbook-v0.5.2`. The parser reads instance, event, counter,
+orientation, and restored in order. It accepts the trailing PID field emitted by the current fixture. Counters are nonnegative integers; orientation accepts
 `portrait`, `landscape`, or `undefined`. Event names accept lowercase letters without
 an allowlist. `wait_for_state_event()` returns the first predicate match in a snapshot,
 including older matching events. It defaults to 15 seconds and a 0.2-second interval;
@@ -249,7 +249,8 @@ timeout, and increment command extras. See [Activity recreation](receipes/v0.5.2
 Activity Manager execution path. `ProcessStateEvent` adds PID to the state fields;
 `RecoveryResult` records before/after PIDs, UUIDs, counters, and the restored flag.
 The parser requires `CookbookState`, the v0.5.2 marker, and ordered fields ending in
-`pid`. `read_process_state_events()` filters on the log tag, not the emulator serial.
+`pid`. `read_process_state_events(serial)` reads the selected device with a Logcat filter
+for `CookbookState`.
 
 `wait_until()` defaults to 10 seconds and a 0.2-second interval. It evaluates once even
 with a zero timeout, returns a Boolean, and validates timeout/interval arguments.
@@ -280,11 +281,11 @@ See [Process recovery](receipes/v0.5.3-process-death-recovery.md) and the
 <component>` using a 30-second timeout. It does not force-stop during launch.
 `LaunchResult` retains optional status, launch state, component, integer timing fields,
 warning lines, raw stdout, and host monotonic elapsed time. Invalid timing fields, failed
-exits, leading stdout errors, and non-ok status raise `LaunchError`; absent status is
+exits, launch timeouts, leading stdout errors, and non-ok status raise `LaunchError`; absent status is
 accepted. Missing ADB remains `FileNotFoundError`.
 
 `get_app_pid()` runs `pidof` separately with a 10-second timeout. Empty output with exit
-code 0 or 1 returns `None`; multiple PIDs, invalid integers, and other nonzero exits raise
+code 0 or 1 returns `None` based on stdout alone; multiple PIDs, invalid integers, and other nonzero exits raise
 `LaunchError`. PID timeouts remain `subprocess.TimeoutExpired`. Force-stop and graceful
 finish use the lifecycle runner's 20-second timeout.
 
@@ -359,7 +360,7 @@ the Python helpers accept one explicitly.
 ## Tests
 
 Unit tests replace process or device calls with sample responses. Integration tests run
-ADB against an online device; shared destructive fixtures require `ANDROID_SERIAL`.
+ADB on the selected emulator or discover an online device, depending on the test.
 
 | Test file | Checks |
 | --- | --- |
@@ -380,16 +381,19 @@ ADB against an online device; shared destructive fixtures require `ANDROID_SERIA
 | `tests/unit/test_package_lifecycle.py` | Successful result and package operation order with mocked helpers |
 | `tests/unit/test_package_lifecycle_state_machine.py` | Generated install/enable/disable/clear/uninstall sequences against an in-memory fake; 100 examples × up to 30 steps |
 | `tests/integration/test_package_lifecycle_state_machine.py` | Same intended model against real package manager helpers; 3 examples × up to 5 steps; skips for a missing/empty APK or no online device |
-| `tests/integration/test_package_lifecycle.py` | Install, APK paths, clear without removal, uninstall, and full sequence; requires the built fixture APK and an online device |
+| `tests/integration/test_package_lifecycle.py` | Install, APK paths, clear without removal, uninstall, and full sequence; requires the built fixture APK and the selected emulator |
+| `tests/integration/test_fixutre_apk.py` | Destructive APK smoke test: install with `-t` and verify package presence |
 | `tests/integration/test_package_manager.py` | Package listing, Settings existence and APK paths, and system packages |
 | `tests/integration/test_device.py` | Device discovery and numeric SDK output |
 | `tests/integration/test_shell.py` | Shell user, Linux kernel output, and a `system` root entry |
 | `tests/integration/test_properties.py` | Model, SDK, Android version, property listing, and collected report |
 
-Integration modules use `pytest.mark.integration`. Read-only tests skip if no device is
-online; shared destructive fixtures skip if `ANDROID_SERIAL` is unset, is not an emulator
-serial, or does not report state `device`.
-Missing ADB or failed commands cause errors.
+Integration tests carry the `integration` marker. The shared `android_serial` fixture
+requires `ANDROID_SERIAL` to select an `emulator-*` serial whose `adb get-state` returns
+`device`. This applies to fixture-based destructive tests and to the read-only SDK,
+shell, properties, and package manager tests. Device discovery checks for any online
+device, and the lifecycle state machine selects the first one. Missing ADB and command
+failures typically surface as errors. A failed `get-state` check causes a fixture skip.
 
 Activity lifecycle tests share the package setup and cleanup fixtures. They install the
 rebuilt APK, clear Logcat, and observe callbacks sequentially on a dedicated emulator.
@@ -410,7 +414,7 @@ helper. Their shared fixtures select an online `emulator-*` serial from `ANDROID
 check APK existence once per session. Function-scoped cleanup rejects a pre-existing
 fixture package, then attempts force-stop and uninstallation in nested `finally` blocks.
 Uninstallation is attempted even if force-stop fails; cleanup failures remain visible. The generated APK comes from `fixtures/test-app` through `scripts/build-test-apk.sh`
-and is ignored by Git. Tests skip if the expected APK is missing or no device is online.
+and is ignored by Git. Tests skip if the expected APK is missing or emulator selection fails.
 All five carry `integration` and `destructive` markers. `pytest.ini` excludes destructive
 tests by default; select `-m "integration and destructive"` to run them.
 The lifecycle unit tests do not cover false results or exceptions. See the
@@ -431,8 +435,8 @@ See the [state machine recipe](receipes/v0.4.1-package-lifecycle.md#6-test-the-p
 
 Test skip conditions describe runtime behavior, not a successful commit check. Before
 every commit, rebuild the fixture APK and run the entire unit and integration suites
-on a dedicated emulator. Select integration tests with `-m integration` to override the
-default exclusion of destructive tests. All tests must pass without skips or deselection.
+with `make test` on a dedicated emulator. The Makefile clears the default marker filter
+to include destructive tests. All tests must pass without skips or deselection.
 Run sequentially with only the dedicated emulator online, because device selection
 varies between tests and Activity lifecycle tests clear shared Logcat. Follow the
 [commit checklist](../CommitManual.md#run-the-full-integration-suite) for setup, commands,
