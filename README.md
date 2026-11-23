@@ -3,7 +3,8 @@
 Learn to inspect Android devices with Android Debug Bridge (ADB) and Python. This project
 covers device discovery, shell commands, system properties, package management,
 Activity Manager operations, Activity lifecycle observation, and rotation-driven Activity
-recreation, background process death, and saved state recovery (v0.5.3). Tests include
+recreation, background process death, saved state recovery, and cold, warm, and hot
+launch diagnostics (v0.5.4). Tests include
 unit tests and checks that run on an emulator or physical device.
 
 ## Before you begin
@@ -83,14 +84,14 @@ PYTHONPATH=src poetry run pytest
 ```
 
 Build the disposable APK before running package lifecycle, Activity Manager, Activity
-lifecycle, Activity recreation, or process recovery integration tests:
+lifecycle, Activity recreation, process recovery, or launch diagnostics integration tests:
 
 ```bash
 ./scripts/build-test-apk.sh
 ```
 
 The fixed-sequence package lifecycle, Activity Manager, Activity lifecycle, Activity
-recreation, and process recovery tests use the dedicated emulator selected by
+recreation, process recovery, and launch diagnostics tests use the dedicated emulator selected by
 `ANDROID_SERIAL`. Opt in to these destructive tests explicitly:
 
 ```bash
@@ -99,7 +100,8 @@ PYTHONPATH=src poetry run pytest tests/integration/test_activity_manager.py \
   tests/integration/test_package_lifecycle.py \
   tests/integration/test_activity_lifecycle.py \
   tests/integration/test_activity_recreation.py \
-  tests/integration/test_process_recovery.py -m "integration and destructive" -v
+  tests/integration/test_process_recovery.py \
+  tests/integration/test_activity_launch_diagnostics.py -m "integration and destructive" -v
 ```
 
 The tests require the fixture package to be absent before setup, then install and remove it.
@@ -140,15 +142,13 @@ adb devices -l
 adb -s "$ANDROID_SERIAL" get-state
 # If the fixture is installed, uninstall it before testing.
 adb -s "$ANDROID_SERIAL" shell pm list packages com.example.androidcookbook.fixture
-PYTHONPATH=src poetry run pytest tests/unit
-PYTHONPATH=src poetry run pytest tests/integration -m integration -v -rs
+make test
 git diff --check
 ```
 
 Both suites must pass completely, with no failures, errors, skipped tests, or deselected
-tests. Resolve missing prerequisites and rerun if any tests skip. Default runs exclude
-destructive tests, and recipe-specific runs cover only part of the suite; neither
-satisfies this requirement. Confirm the fixture package is absent after teardown.
+tests. Resolve missing prerequisites and rerun if any tests skip. Confirm the fixture
+package is absent after teardown.
 
 Activity recreation tests also change system rotation settings, restore their captured
 values during teardown, and verify counter restoration in a new Activity instance. See
@@ -157,6 +157,12 @@ values during teardown, and verify counter restoration in a new Activity instanc
 Process recovery tests background the app, request `am kill`, confirm process absence,
 and relaunch the saved task to validate its PID, instance UUID, and restored counter.
 See [Process death and state recovery](docs/receipes/v0.5.3-process-death-recovery.md).
+
+Launch diagnostics compare process PID, Activity UUID, and callbacks across cold, warm,
+and hot launches. Timing fields remain optional. Warm and hot tests can skip when the
+process does not survive setup; these skips do not satisfy the commit checklist. See
+[Activity launch diagnostics](docs/receipes/v0.5.4-activity-launch-diagnostics.md), including
+polling behavior, test coverage, and diagnostic limitations.
 
 The Makefile exports `ANDROID_SERIAL`, defaulting to `emulator-5554`. Override it with
 `make <target> ANDROID_SERIAL=emulator-5556` when using another dedicated emulator.
@@ -169,15 +175,16 @@ The Makefile exports `ANDROID_SERIAL`, defaulting to `emulator-5554`. Override i
 | `make test_unit` | Run all unit tests |
 | `make test_integration` | Run only tests marked both `integration` and `destructive` |
 | `make test_all_integration` | Run the complete integration suite, including destructive tests |
-| `make test` | Run the default suite, excluding destructive tests |
+| `make test` | Run all unit and integration tests, including destructive tests |
 
-Use `make test_all_integration` for the integration check in Commit Manual.
-`make test_integration` deselects read-only tests and does not meet that requirement.
+`make test` clears the default marker filter in `pytest.ini` with `-m ""` and reports skip reasons.
+Build the fixture APK and prepare a dedicated emulator before running it.
 
 ## Find your way around
 
 | Path | Contents |
 | --- | --- |
+| `src/android_cookbook/activity_launch_diagnostics.py` | Launch timing parsing, PID lookup, controlled launch assertions, and Displayed event parsing |
 | `src/android_cookbook/adb.py` | ADB execution and device discovery |
 | `src/android_cookbook/shell.py` | Shell commands and output handling |
 | `src/android_cookbook/process_recovery.py` | PID-aware state parsing, process polling, launcher task recovery, and recovery assertions |
@@ -211,11 +218,13 @@ Use `make test_all_integration` for the integration check in Commit Manual.
 - [v0.5.1: Observe Activity lifecycle callbacks](docs/receipes/v0.5.1-activity-lifecycle.md)
 - [v0.5.2: Recreate an Activity and restore state](docs/receipes/v0.5.2-activity-recreation.md)
 - [v0.5.3: Recover state after process death](docs/receipes/v0.5.3-process-death-recovery.md)
+- [v0.5.4: Diagnose cold, warm, and hot launches](docs/receipes/v0.5.4-activity-launch-diagnostics.md)
 - [Roadmap](Roadmap.md)
 - [Commit checklist](CommitManual.md)
 
 ## Limitations
 
 The JSON commands always use the first online device and have no device-selection option.
-Activity lifecycle ADB calls have a 20-second timeout; other ADB wrappers have no timeout.
+Activity lifecycle ADB calls have a 20-second timeout. Launch diagnostics use a
+30-second launch timeout and a 10-second PID lookup timeout; other ADB wrappers have no timeout.
 Property collection requires an SDK value that Python can convert to an integer. See [Architecture](docs/architecture.md) for error handling and parser behavior.

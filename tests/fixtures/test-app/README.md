@@ -34,7 +34,7 @@ Activity accepts `cookbook_action=increment` or `report`. See
 [Activity recreation](../../../docs/receipes/v0.5.2-activity-recreation.md). Rotation tests
 change system settings and attempt to restore the captured values during teardown.
 
-The current fixture version is v0.5.3 (`versionCode=5`). State logs append
+The current fixture version is v0.5.4 (`versionCode=6`). Since v0.5.3, state logs append
 `pid=<Process.myPid()>` while retaining the v0.5.2 marker. The process recovery parser
 requires this field; an older APK can install successfully and still cause state-event
 timeouts. Only `created` reports whether `savedInstanceState` was received.
@@ -43,6 +43,13 @@ See [Process recovery](../../../docs/receipes/v0.5.3-process-death-recovery.md).
 Rotation tests establish portrait after Activity launch using `wm user-rotation lock 0`,
 then wait for the portrait event before incrementing. Their setup may itself recreate
 the Activity. See the [rotation fix](../../../docs/receipes/v0.5.2-activity-recreation.md#v053-rotation-fix-root-cause-and-solution).
+
+Launch diagnostics reuse the lifecycle UUID, state events, graceful finish extra, and
+`report` action. No new log marker is required for v0.5.4. They force-stop for cold
+setup, finish the Activity for warm setup, and press Home for hot setup. Warm and hot
+tests skip if their process-survival preconditions are unavailable; a skip is incomplete
+commit verification. See [Activity launch diagnostics](../../../docs/receipes/v0.5.4-activity-launch-diagnostics.md)
+for commands and current validation limitations.
 
 Rebuild with `./scripts/build-test-apk.sh` after source changes so tests install the updated APK.
 
@@ -59,7 +66,8 @@ PYTHONPATH=src poetry run pytest \
   tests/integration/test_activity_manager.py \
   tests/integration/test_activity_lifecycle.py \
   tests/integration/test_activity_recreation.py \
-  tests/integration/test_process_recovery.py -m "integration and destructive" -v
+  tests/integration/test_process_recovery.py \
+  tests/integration/test_activity_launch_diagnostics.py -m "integration and destructive" -v
 ```
 
 The tests install, inspect, clear, and uninstall the app. The state machine also checks

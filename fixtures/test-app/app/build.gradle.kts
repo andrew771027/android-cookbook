@@ -14,9 +14,9 @@ android {
 
         targetSdk = 36
 
-        versionCode = 5
+        versionCode = 6
 
-        versionName = "0.5.3"
+        versionName = "0.5.4"
 
     }
 }

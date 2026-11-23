@@ -33,7 +33,7 @@ init_android_serial:
 	@echo "ANDROID_SERIAL=$$ANDROID_SERIAL"
 
 test:
-	@PYTHONPATH=src poetry run pytest -v ./tests
+	@PYTHONPATH=src poetry run pytest -v -rs -m "" ./tests
 
 test_unit:
 	@PYTHONPATH=src poetry run pytest -v ./tests/unit
