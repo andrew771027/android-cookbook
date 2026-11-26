@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from android_cookbook.android_lifecycle import (
+from android_cookbook.activity_lifecycle import (
     LifecycleError,
     clear_logcat,
     press_home,
