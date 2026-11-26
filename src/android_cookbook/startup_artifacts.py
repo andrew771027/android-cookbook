@@ -3,7 +3,6 @@ import json
 import platform
 import subprocess
 import sys
-
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,15 +11,15 @@ from uuid import uuid4
 from android_cookbook.startup_performance import (
     BenchmarkResult,
 )
-
 from android_cookbook.startup_statistics import (
     PERCENTILE_METHOD,
 )
 
+
 def collect_environment(
     serial: str,
 ) -> dict:
-    
+
     def adb_value(*args: str) -> str | None:
 
         try:
@@ -79,6 +78,7 @@ def collect_environment(
         },
     }
 
+
 def create_artifact_directory(
     root: Path,
     launch_type: str,
@@ -88,27 +88,41 @@ def create_artifact_directory(
 
     run_id = uuid4().hex[:8]
 
-    directory = root / (
-        f"{timestamp}-{launch_type}-{run_id}"
-    )
+    directory = root / (f"{timestamp}-{launch_type}-{run_id}")
 
-    directory.mkdir(parents=True, exist_ok=False,)
+    directory.mkdir(
+        parents=True,
+        exist_ok=False,
+    )
 
     return directory
 
-def write_json(path: Path, data: dict,) -> None:
+
+def write_json(
+    path: Path,
+    data: dict,
+) -> None:
     path.write_text(
         json.dumps(
             data,
             indent=2,
             ensure_ascii=False,
             allow_nan=False,
-        ) + "\n",
-        encoding="utf-8"
+        )
+        + "\n",
+        encoding="utf-8",
     )
 
-def write_artifacts(result: BenchmarkResult, directory: Path, environment: dict,) -> None:
-    directory.mkdir(parents=True, exist_ok=True,)
+
+def write_artifacts(
+    result: BenchmarkResult,
+    directory: Path,
+    environment: dict,
+) -> None:
+    directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     raw_directory = directory / "raw"
     raw_directory.mkdir(exist_ok=True)
@@ -146,24 +160,24 @@ def write_artifacts(result: BenchmarkResult, directory: Path, environment: dict,
         for sample in result.samples:
             launch = sample.result
 
-            writer.writerow({
-                "run_id": sample.run_id,
-                "launch_type": sample.launch_type.value,
-                "warmup": sample.status.value,
-                "reported_launch_state": launch.launch_state if launch else None,
-                "pid_before": sample.pid_before,
-                "pid_after": sample.pid_after,
-                "instance_before": sample.instance_before,
-                "instance_after": sample.instance_after,
-                "this_time_ms": launch.this_time_ms if launch else None,
-                "wait_time_ms": launch.wait_time_ms if launch else None,
-                "host_elapsed_ms": launch.host_elapsed_ms if launch else None,
-                "error": sample.error,
-            })
-
-            raw_path = raw_directory / (
-                f"run_{sample.run_id:03d}.txt"
+            writer.writerow(
+                {
+                    "run_id": sample.run_id,
+                    "launch_type": sample.launch_type.value,
+                    "warmup": sample.status.value,
+                    "reported_launch_state": launch.launch_state if launch else None,
+                    "pid_before": sample.pid_before,
+                    "pid_after": sample.pid_after,
+                    "instance_before": sample.instance_before,
+                    "instance_after": sample.instance_after,
+                    "this_time_ms": launch.this_time_ms if launch else None,
+                    "wait_time_ms": launch.wait_time_ms if launch else None,
+                    "host_elapsed_ms": launch.host_elapsed_ms if launch else None,
+                    "error": sample.error,
+                }
             )
+
+            raw_path = raw_directory / (f"run_{sample.run_id:03d}.txt")
 
             sections = []
 
@@ -171,9 +185,7 @@ def write_artifacts(result: BenchmarkResult, directory: Path, environment: dict,
                 sections.append(launch.raw_output)
 
             if sample.error:
-                sections.append(
-                    f"Error: {sample.error}"
-                )
+                sections.append(f"Error: {sample.error}")
 
             raw_path.write_text(
                 "\n".join(sections),
@@ -190,7 +202,7 @@ def write_artifacts(result: BenchmarkResult, directory: Path, environment: dict,
             "config": asdict(result.config),
             "summary": asdict(result.summary),
         },
-    )    
+    )
 
     write_json(
         directory / "environment.json",
