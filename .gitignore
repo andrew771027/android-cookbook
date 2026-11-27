@@ -12,3 +12,6 @@ fixtures/test-app/local.properties
 
 # Generated test APK
 tests/fixtures/test-app/*.apk
+
+# Generated benchmark artifacts
+artifacts/startup/
