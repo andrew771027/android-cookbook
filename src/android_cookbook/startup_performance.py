@@ -10,16 +10,21 @@ from android_cookbook.activity_launch_diagnostics import (
     LaunchType,
     assert_launch_type,
 )
+from android_cookbook.startup_statistics import (
+    TimingStatistics,
+    summarize,
+)
 
-from android_cookbook.startup_statistics import (TimingStatistics, summarize,)
 
 class RunStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
     INVALID = "invalid"
 
+
 class InvalidScenarioError(RuntimeError):
     pass
+
 
 @dataclass(frozen=True)
 class BenchmarkConfig:
@@ -30,19 +35,13 @@ class BenchmarkConfig:
 
     def __post_init__(self):
         if self.iterations <= 0:
-            raise ValueError(
-                "iterations must be > 0"
-            )
-        
+            raise ValueError("iterations must be > 0")
+
         if self.warmup_runs < 0:
-            raise ValueError(
-                "warmup_runs must be >= 0"
-            )
-        
+            raise ValueError("warmup_runs must be >= 0")
+
         if self.interval_seconds < 0:
-            raise ValueError(
-                "interval_seconds must be >= 0"
-            )
+            raise ValueError("interval_seconds must be >= 0")
 
 
 @dataclass(frozen=True)
@@ -74,6 +73,7 @@ class BenchmarkSummary:
     wait_time: TimingStatistics
     host_elapsed: TimingStatistics
 
+
 @dataclass(frozen=True)
 class BenchmarkResult:
     config: BenchmarkConfig
@@ -88,14 +88,15 @@ LaunchExperiment = Callable[
     LaunchObservation,
 ]
 
+
 def build_summary(
     config: BenchmarkConfig,
     samples: list[StartupSample],
 ) -> BenchmarkSummary:
 
-    measured = [ sample for sample in samples if not sample.warmup ]
+    measured = [sample for sample in samples if not sample.warmup]
 
-    successful = [ sample for sample in measured if sample.status == RunStatus.SUCCESS ]
+    successful = [sample for sample in measured if sample.status == RunStatus.SUCCESS]
 
     failed = sum(sample.status == RunStatus.FAILED for sample in measured)
 
@@ -111,7 +112,10 @@ def build_summary(
             if sample.result is None:
                 continue
 
-            value = getattr(sample.result, field_name,)
+            value = getattr(
+                sample.result,
+                field_name,
+            )
 
             if value is not None:
                 values.append(float(value))
@@ -125,11 +129,12 @@ def build_summary(
         successful_runs=len(successful),
         failed_runs=failed,
         invalid_runs=invalid,
-        success_rate= len(successful) / len(successful) if measured else 0.0,
+        success_rate=len(successful) / len(successful) if measured else 0.0,
         total_time=summarize(metric_values("total_time_ms")),
         wait_time=summarize(metric_values("wait_time_ms")),
         host_elapsed=summarize(metric_values("host_elapsed_ms")),
     )
+
 
 def run_benchmark(
     config: BenchmarkConfig,
@@ -155,7 +160,7 @@ def run_benchmark(
                 raise InvalidScenarioError("Unexpeced launch scenario")
 
             try:
-            
+
                 assert_launch_type(observation)
 
             except AssertionError as exc:
@@ -185,9 +190,7 @@ def run_benchmark(
         samples.append(sample)
 
         if index < total_runs - 1:
-            time.sleep(
-                config.interval_seconds
-            )
+            time.sleep(config.interval_seconds)
 
     return BenchmarkResult(
         config=config,
